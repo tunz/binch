@@ -107,6 +107,14 @@ class DisassembleView:
                 self.disasmlist.set_focus(self.index_map[address])
                 return "Jump to "+hex(address)
             else:
+                for i in range(1, 0x10):
+                    if address - i in self.index_map:
+                        self.disasmlist.set_focus(self.index_map[address - i])
+                        return "Jump to "+hex(address - i)
+                    elif address + i in self.index_map:
+                        self.disasmlist.set_focus(self.index_map[address + i])
+                        return "Jump to "+hex(address + i)
+
                 return "Invalid address: "+hex(address)
 
         if k in ('q', 'Q'):
