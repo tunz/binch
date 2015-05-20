@@ -52,15 +52,13 @@ class Disassembler():
         mode = {'x86': CS_MODE_32, 'x64': CS_MODE_64}[self.elf.get_machine_arch()]
         self.md = Cs(arch, mode)
 
-    def disasm(self, address):
+    def disasm(self, address, size=None):
         count = 0
         result=[]
-        for i in self.md.disasm(self.readMemory(address, 0x1000), 0x1000):
-            line = "0x%x\t%s\t%s\t%s" %(i.address - 0x1000 + address,
+        for i in self.md.disasm(self.readMemory(address, size), address):
+            line = "0x%x\t%s\t%s\t%s" %(i.address,
                     ' '.join(["%02x" % (j) for j in i.bytes]),
                     i.mnemonic, i.op_str)
             result.append(line)
 
         return result
-
-
