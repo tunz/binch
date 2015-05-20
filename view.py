@@ -1,5 +1,6 @@
 import urwid
 from disassemble import *
+from statusbar import *
 
 class DisassembleText(urwid.Text):
 
@@ -31,18 +32,11 @@ class DisassembleList(urwid.SimpleListWalker):
 
 class DisassembleView:
     palette = [('header', 'white', 'black'),
-            ('reveal focus', 'black', 'light gray', 'standout'),]
-
-
-    footer_text = [
-            ('title', 'test'), '    ',
-            ('key', 'Q')
-            ]
+            ('reveal focus', 'black', 'light gray', 'standout'),
+            ('status', 'white', 'dark blue', 'standout')]
 
     def __init__(self, filename):
         self.header = urwid.Text(filename)
-        palette = [('header', 'white', 'black'),
-                    ('reveal focus', 'black', 'dark cyan', 'standout'),]
 
         da = Disassembler(filename)
         body = da.disasm(da.entry)
@@ -71,7 +65,7 @@ class DisassembleView:
 
         self.body = urwid.Columns([('fixed', 100, self.leftListbox), ('fixed', 1, urwid.SolidFill("|")), self.rightListbox])
 
-        self.footer = urwid.AttrWrap(urwid.Text(self.footer_text), 'foot')
+        self.footer = StatusBar("status bar")
         self.view = urwid.Frame(
                 urwid.AttrWrap(self.body, 'body'),
                 header=urwid.AttrWrap(self.header, 'head'),
