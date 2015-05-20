@@ -54,7 +54,7 @@ class DisassembleView:
                 items.append(SymbolText(" < "+da.symtab[address]+" >"))
             items.append(urwid.Columns(
                         [('fixed', 12, DisassembleText(i.split('\t')[0])),
-                            ('fixed', 20, DisassembleText(i.split('\t')[1])),
+                            ('fixed', 25, DisassembleText(i.split('\t')[1])),
                             ('fixed', 10, DisassembleText(i.split('\t')[2])),
                             DisassembleText(i.split('\t')[3])]))
 

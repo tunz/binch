@@ -57,7 +57,7 @@ class Disassembler():
         result=[]
         for i in self.md.disasm(self.readMemory(address, 0x1000), 0x1000):
             line = "0x%x\t%s\t%s\t%s" %(i.address - 0x1000 + address,
-                    ' '.join([hex(j).lstrip('0x').rstrip('L') for j in i.bytes]),
+                    ' '.join(["%02x" % (j) for j in i.bytes]),
                     i.mnemonic, i.op_str)
             result.append(line)
 
