@@ -17,7 +17,11 @@ class Disassembler():
         return ""
 
     def loadELF(self, filename):
-        self.elf = ELFFile(file(sys.argv[1]))
+        try:
+            self.elf = ELFFile(file(sys.argv[1]))
+        except:
+            print "[-] It is not ELF file: "+sys.argv[1]
+            sys.exit()
 
         # Load code segments
         for elf_segment in self.elf.iter_segments():
