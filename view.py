@@ -101,10 +101,13 @@ class DisassembleView:
             try:
                 address = int(text, 16)
             except:
-                return "Fail"
+                return "It is not hexadecimal number: "+text
 
-            self.disasmlist.set_focus(self.index_map[address])
-            return "Jump to "+hex(address)
+            if address in self.index_map:
+                self.disasmlist.set_focus(self.index_map[address])
+                return "Jump to "+hex(address)
+            else:
+                return "Invalid address: "+hex(address)
 
         if k in ('q', 'Q'):
             raise urwid.ExitMainLoop()
