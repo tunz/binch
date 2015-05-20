@@ -45,16 +45,18 @@ class DisassembleView:
                     ('reveal focus', 'black', 'dark cyan', 'standout'),]
 
         da = Disassembler(filename)
-        body = da.disassem(da.entry)
+        body = da.disasm(da.entry)
         items = []
         for i in body:
             address = int(i.split('\t')[0].lstrip('0x'),16)
             if address in da.symtab:
+                items.append(SymbolText(" "))
                 items.append(SymbolText(" < "+da.symtab[address]+" >"))
             items.append(urwid.Columns(
                         [('fixed', 12, DisassembleText(i.split('\t')[0])),
-                            ('fixed', 10, DisassembleText(i.split('\t')[1])),
-                            DisassembleText(i.split('\t')[2])]))
+                            ('fixed', 20, DisassembleText(i.split('\t')[1])),
+                            ('fixed', 10, DisassembleText(i.split('\t')[2])),
+                            DisassembleText(i.split('\t')[3])]))
 
         items = map(lambda x: urwid.AttrMap(x, 'bg', 'reveal focus'), items)
         walker = DisassembleList(items)
@@ -67,7 +69,7 @@ class DisassembleView:
         self.rightListbox = urwid.Padding(self.rightListbox, ('fixed left',1), ('fixed right',2))
         self.rightListbox = urwid.Filler(self.rightListbox, ('fixed top',1), ('fixed bottom',1))
 
-        self.body = urwid.Columns([self.leftListbox, ('fixed', 1, urwid.SolidFill("|")), self.rightListbox])
+        self.body = urwid.Columns([('fixed', 100, self.leftListbox), ('fixed', 1, urwid.SolidFill("|")), self.rightListbox])
 
         self.footer = urwid.AttrWrap(urwid.Text(self.footer_text), 'foot')
         self.view = urwid.Frame(

@@ -40,8 +40,8 @@ class Disassembler():
 
         self.entry = self.elf.header.e_entry
 
-        self.symtab = dict()
         # Load symbol table
+        self.symtab = dict()
         for section in self.elf.iter_sections():
             if isinstance(section, SymbolTableSection):
                 for symbol in section.iter_symbols():
@@ -52,11 +52,13 @@ class Disassembler():
         mode = {'x86': CS_MODE_32, 'x64': CS_MODE_64}[self.elf.get_machine_arch()]
         self.md = Cs(arch, mode)
 
-    def disassem(self, address):
+    def disasm(self, address):
         count = 0
         result=[]
         for i in self.md.disasm(self.readMemory(address, 0x1000), 0x1000):
-            line = "0x%x\t%s\t%s" %(i.address - 0x1000 + address, i.mnemonic, i.op_str)
+            line = "0x%x\t%s\t%s\t%s" %(i.address - 0x1000 + address,
+                    ' '.join([hex(j).lstrip('0x').rstrip('L') for j in i.bytes]),
+                    i.mnemonic, i.op_str)
             result.append(line)
 
         return result
