@@ -71,7 +71,7 @@ class DisassembleView:
                         [('fixed', 12, DisassembleText(i.split('\t')[0])),
                             ('fixed', 25, DisassembleText(i.split('\t')[1])),
                             ('fixed', 10, DisassembleText(i.split('\t')[2])),
-                            DisassembleText(i.split('\t')[3])]))
+                            ('fixed', 55, DisassembleText(i.split('\t')[3]))]))
             self.index_map[address] = idx
             idx+=1
 
@@ -79,7 +79,7 @@ class DisassembleView:
         walker = DisassembleList(items)
 
         self.disasmlist = urwid.ListBox(walker)
-        self.body = urwid.Padding(self.disasmlist, ('fixed left',2), ('fixed right',1))
+        self.body = urwid.Padding(self.disasmlist, 'center', 105)
         self.body = urwid.Filler(self.body, ('fixed top',1), ('fixed bottom',1))
 
         self.footer = StatusBar("status bar")
