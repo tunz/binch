@@ -6,14 +6,39 @@ import signals
 class DisassembleText(urwid.Text):
 
     def selectable(self):
+        return False
+
+    def keypress(self, size, key):
+        return key
+
+class DisassembleEditable(urwid.WidgetWrap):
+    def __init__(self, txt):
+        urwid.WidgetWrap.__init__(self, None)
+        self._w = urwid.Text(txt)
+        self.editMode = False
+
+    def selectable(self):
         return True
 
     def keypress(self, size, key):
-        if key == "j":
-            key = "down"
-        if key == "k":
-            key = "up"
-        return key
+        if self.editMode:
+            if key == "enter":
+                self.editMode = False
+                self._w = urwid.Text(self._w.get_edit_text())
+            elif isinstance(key, basestring):
+                self._w.keypress(size, key)
+            else:
+                return key
+        else:
+            if key == "enter":
+                self._w = urwid.Edit("", self._w.text)
+                self.editMode = True
+            else:
+                if key == "j":
+                    key = "down"
+                elif key == "k":
+                    key = "up"
+                return key
 
 class SymbolText(urwid.Text):
 
@@ -23,12 +48,21 @@ class SymbolText(urwid.Text):
     def keypress(self, size, key):
         return key
 
-class DisassembleList(urwid.SimpleListWalker):
+class DisassembleList(urwid.ListBox):
+    def __init__(self, dList):
+        body = urwid.SimpleListWalker(dList)
+        super(DisassembleList, self).__init__(body)
 
     def selectable(self):
         return True
 
     def keypress(self, size, key):
+        key = super(self.__class__, self).keypress(size, key)
+        if key == "j":
+            key = "down"
+        elif key == "k":
+            key = "up"
+
         return key
 
 class DisassembleWindow(urwid.Frame):
@@ -44,9 +78,9 @@ class DisassembleWindow(urwid.Frame):
     def sig_focus(self, sender, section):
         self.focus_position = section
 
-    def keypress(self, size, k):
-        k = super(self.__class__, self).keypress(size, k)
-        return k
+    def keypress(self, size, key):
+        key = super(self.__class__, self).keypress(size, key)
+        return key
 
 class DisassembleView:
     palette = [('header', 'white', 'black'),
@@ -71,14 +105,13 @@ class DisassembleView:
                         [('fixed', 12, DisassembleText(i.split('\t')[0])),
                             ('fixed', 25, DisassembleText(i.split('\t')[1])),
                             ('fixed', 10, DisassembleText(i.split('\t')[2])),
-                            ('fixed', 55, DisassembleText(i.split('\t')[3]))]))
+                            ('fixed', 55, DisassembleEditable(i.split('\t')[3]))]))
             self.index_map[address] = idx
             idx+=1
 
         items = map(lambda x: urwid.AttrMap(x, 'bg', 'reveal focus'), items)
-        walker = DisassembleList(items)
+        self.disasmlist = DisassembleList(items)
 
-        self.disasmlist = urwid.ListBox(walker)
         self.body = urwid.Padding(self.disasmlist, 'center', 105)
         self.body = urwid.Filler(self.body, ('fixed top',1), ('fixed bottom',1))
 
