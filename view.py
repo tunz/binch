@@ -92,6 +92,9 @@ class DisassembleList(urwid.WidgetWrap):
         urwid.WidgetWrap.__init__(self, None)
         self.updateList(dList)
 
+    def set_focus(self, idx):
+        self._w.set_focus(idx)
+
     def updateList(self, dList, focus=0):
         self._w = urwid.ListBox(urwid.SimpleListWalker(dList))
         if focus:
