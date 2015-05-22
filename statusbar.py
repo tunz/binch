@@ -56,6 +56,8 @@ class CommandLine(urwid.WidgetWrap):
         self.promptYNCallback = False
         if msg:
             signals.set_message.send(self, message=msg, expire=1)
+        else:
+            self.clear()
 
     def prompt_clear(self):
         self.promptCallback = False

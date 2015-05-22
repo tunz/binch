@@ -42,6 +42,26 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ('fixed', 65, self._editbox),
             ])
 
+    def modifyOpcode(self, opcode):
+        if opcode == "":
+            self.mode4()
+            return
+
+        original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
+        if len(opcode) < original_opcode_len:
+            opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
+
+        self.da.writeMemory(int(self.address.text, 16), opcode)
+
+        if original_opcode_len == len(opcode):
+            self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
+            code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
+            self.instr.set_text(code.mnemonic)
+            self.operands.set_text(code.op_str)
+            self.mode4()
+        else:
+            self.view.updateList(self.view.disasmlist._w.focus_position)
+
     def keypress(self, size, key):
         if self.editMode:
             if key == "esc":
@@ -51,24 +71,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self.editMode = False
                 asmcode = self._editbox.get_edit_text()
                 opcode = assemble(asmcode, self.da.arch)
-                if opcode == "":
-                    self.mode4()
-                    return
-
-                original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
-                if len(opcode) < original_opcode_len:
-                    opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
-
-                self.da.writeMemory(int(self.address.text, 16), opcode)
-
-                if original_opcode_len == len(opcode):
-                    self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
-                    code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
-                    self.instr.set_text(code.mnemonic)
-                    self.operands.set_text(code.op_str)
-                    self.mode4()
-                else:
-                    self.view.updateList(self.view.disasmlist._w.focus_position)
+                self.modifyOpcode(opcode)
             elif isinstance(key, basestring):
                 self._w.keypress(size, key)
             else:
@@ -78,10 +81,15 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self._editbox = urwid.Edit("", self.instr.text+" "+self.operands.text)
                 self.mode3()
                 self.editMode = True
+            elif key == "d" or key == "D":
+                def fillWithNop(yn, arg):
+                    if yn == 'y':
+                        self.modifyOpcode("\x90")
+                signals.set_prompt_yn.send(self, text="Remove this line?", callback=fillWithNop, arg=None)
             else:
-                if key == "j":
+                if key == "j" or key == "J":
                     key = "down"
-                elif key == "k":
+                elif key == "k" or key == "K":
                     key = "up"
                 return key
 
