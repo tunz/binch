@@ -148,7 +148,7 @@ class DisassembleView:
             ('status', 'white', 'dark blue', 'standout')]
 
     def __init__(self, filename):
-        self.header = urwid.Text(" BIP: %s" % (filename))
+        self.header = urwid.Text(" BINCH: %s" % (filename))
 
         self.da = Disassembler(filename)
 
