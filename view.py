@@ -51,6 +51,9 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self.editMode = False
                 asmcode = self._editbox.get_edit_text()
                 opcode = assemble(asmcode, self.da.arch)
+                if opcode == "":
+                    self.mode4()
+                    return
                 self.da.writeMemory(int(self.address.text, 16), opcode)
                 if len(self.opcode.text.replace(' ','').decode('hex')) == len(opcode):
                     self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))

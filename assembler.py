@@ -1,6 +1,7 @@
 
 import os
 from subprocess import Popen, PIPE
+import signals
 
 def assemble(code, arch):
 
@@ -17,7 +18,9 @@ def assemble(code, arch):
     p.wait()
     err = p.stderr.readline()
     if len(err) > 0:
-        return "Error: "+err
+        msg = "Error: "+err.strip()
+        signals.set_message.send(0, message=msg, expire=2)
+        return ""
 
     os.remove('.asm')
     opcode_fd = open('.opcode','rb')
