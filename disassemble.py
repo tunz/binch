@@ -11,10 +11,32 @@ class Disassembler():
         self.loadELF(filename)
 
     def readMemory(self, address, size):
-        for start, end, data in self.memory:
-            if address >= start and address <= end:
-                return data[address - start:size]
+        for vaddr, foffset, memsize, mem in self.memory:
+            if address >= vaddr and address <= vaddr + memsize:
+                if size:
+                    return mem[address - vaddr : address - vaddr + size]
+                else:
+                    return mem[address - vaddr:]
         return ""
+
+    def writeMemory(self, address, data):
+        offset = self.addr2offset(address)
+        for idx, (vaddr, foffset, memsize, mem) in enumerate(self.memory):
+            if offset >= foffset and offset <= foffset + memsize:
+                mem=list(mem)
+                for i in range(0, len(data)):
+                    if offset - foffset + i < len(mem):
+                        mem[offset - foffset + i] = data[i]
+                    else:
+                        mem.append(data[i])
+                        memsize+=1
+                self.memory[idx] = (vaddr, foffset, memsize, ''.join(mem))
+
+    def addr2offset(self, address):
+        for vaddr, foffset, memsize, mem in self.memory:
+            if address >= vaddr and address <= vaddr + memsize:
+                return address - vaddr + foffset
+        return -1
 
     def loadELF(self, filename):
         try:
@@ -40,7 +62,7 @@ class Disassembler():
             with open(sys.argv[1], 'rb') as f:
                 f.seek(offset, 0)
                 data = f.read(filesz)
-                self.memory.append((vaddr, vaddr+memsz, data))
+                self.memory.append((vaddr, offset, memsz, data))
 
         self.entry = self.elf.header.e_entry
 
@@ -52,8 +74,9 @@ class Disassembler():
                     if symbol['st_info']['type'] == 'STT_FUNC':
                         self.symtab[symbol['st_value']] = symbol.name
 
-        arch = {'x86':CS_ARCH_X86,'x64': CS_ARCH_X86}[self.elf.get_machine_arch()]
-        mode = {'x86': CS_MODE_32, 'x64': CS_MODE_64}[self.elf.get_machine_arch()]
+        self.arch = self.elf.get_machine_arch()
+        arch = {'x86':CS_ARCH_X86,'x64': CS_ARCH_X86}[self.arch]
+        mode = {'x86': CS_MODE_32, 'x64': CS_MODE_64}[self.arch]
         self.md = Cs(arch, mode)
 
     def disasm(self, address, size=None):
