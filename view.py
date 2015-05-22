@@ -54,8 +54,14 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 if opcode == "":
                     self.mode4()
                     return
+
+                original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
+                if len(opcode) < original_opcode_len:
+                    opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
+
                 self.da.writeMemory(int(self.address.text, 16), opcode)
-                if len(self.opcode.text.replace(' ','').decode('hex')) == len(opcode):
+
+                if original_opcode_len == len(opcode):
                     self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
                     code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
                     self.instr.set_text(code.mnemonic)
