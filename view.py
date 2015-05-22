@@ -216,7 +216,10 @@ class DisassembleView:
                 return "Invalid address: "+hex(address)
 
         if k in ('q', 'Q'):
-            raise urwid.ExitMainLoop()
+            def askQuit(yn, arg):
+                if yn == 'y':
+                    raise urwid.ExitMainLoop()
+            signals.set_prompt_yn.send(self, text="Quit?", callback=askQuit, arg=None)
         elif k in ('g', 'G'):
             signals.set_prompt.send(self, text="Goto: ", callback=goto)
         elif k in ('s', 'S'):
