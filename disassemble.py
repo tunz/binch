@@ -104,7 +104,7 @@ class Disassembler():
                             f.seek(foffset, 0)
                             f.write(mem)
                         f.close()
-                        os.chmod(filename, 755)
+                        os.chmod(filename, 0755)
                         return "Successfully save to '%s'" % filename
                     except Exception, e:
                         return "Fail to save binary: "+str(e)
