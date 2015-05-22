@@ -6,8 +6,10 @@ class CommandLine(urwid.WidgetWrap):
         urwid.WidgetWrap.__init__(self, None)
         self.clear()
         signals.set_prompt.connect(self.sig_prompt)
+        signals.set_prompt_yn.connect(self.sig_prompt_yn)
         signals.set_message.connect(self.sig_message)
         self.promptCallback = False
+        self.promptYNCallback = False
 
     def clear(self):
         self._w = urwid.Text("")
@@ -22,18 +24,42 @@ class CommandLine(urwid.WidgetWrap):
             signals.call_delay.send(seconds=expire, callback=cb)
 
     def sig_prompt(self, sender, text, callback):
+        self.promptYNCallback = False
         signals.focus.send(self, section='footer')
         self._w = urwid.Edit(text, "")
         self.promptCallback = callback
 
+    def sig_prompt_yn(self, sender, text, callback, arg):
+        self.promptCallback = False
+        signals.focus.send(self, section='footer')
+        self.askYN(text, callback, arg)
+
+    def askYN(self, text, callback, arg):
+        self._w = urwid.Edit(text + " (y/n):", '')
+        self.promptYNCallback = (callback, arg)
+
     def prompt(self, text):
         msg = self.promptCallback(text)
-        signals.focus.send(self, section='body')
         self.promptCallback = False
-        signals.set_message.send(self, message=msg, expire=1)
+        if isinstance(msg, tuple):
+            msg, callback, arg = msg
+            self.askYN(msg, callback, arg)
+        else:
+            signals.focus.send(self, section='body')
+            if isinstance(msg, str):
+                signals.set_message.send(self, message=msg, expire=1)
+
+    def prompt_yn(self, yn):
+        func, arg = self.promptYNCallback
+        msg = func(yn, arg)
+        signals.focus.send(self, section='body')
+        self.promptYNCallback = False
+        if msg:
+            signals.set_message.send(self, message=msg, expire=1)
 
     def prompt_clear(self):
         self.promptCallback = False
+        self.promptYNCallback = False
         signals.focus.send(self, section='body')
         self.clear()
 
@@ -48,6 +74,15 @@ class CommandLine(urwid.WidgetWrap):
                 self.prompt(self._w.get_edit_text())
             elif isinstance(k, basestring):
                 self._w.keypress(size, k)
+            else:
+                return k
+        elif self.promptYNCallback:
+            if k == "esc":
+                self.prompt_clear()
+            elif k == "y" or k == "Y":
+                self.prompt_yn('y')
+            elif k == "n" or k == "N":
+                self.prompt_yn('n')
             else:
                 return k
 

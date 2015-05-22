@@ -1,13 +1,15 @@
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
-import sys
+import sys, os
+import signals
 
 class Disassembler():
 
     memory = []
 
     def __init__(self, filename):
+        self.filename = filename
         self.loadELF(filename)
 
     def readMemory(self, address, size):
@@ -89,3 +91,28 @@ class Disassembler():
             result.append(line)
 
         return result
+
+    def save(self):
+        def saveBinary(filename):
+            def saveBinaryYes(yn, filename):
+                if yn == 'y':
+                    try:
+                        original_binary = open(self.filename, 'rb').read()
+                        f = open(filename, 'wb')
+                        f.write(original_binary)
+                        for vaddr, foffset, memsize, mem in self.memory:
+                            f.seek(foffset, 0)
+                            f.write(mem)
+                        f.close()
+                        return "Successfully save to '%s'" % filename
+                    except Exception, e:
+                        return "Fail to save binary: "+str(e)
+
+                return "Fail to save binary"
+
+            if os.path.exists(filename):
+                return (filename+" already exists, Overwrite?", saveBinaryYes, filename)
+            else:
+                return saveBinaryYes('y', filename)
+
+        signals.set_prompt.send(self, text="Save to (filename): ", callback=saveBinary)

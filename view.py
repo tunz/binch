@@ -200,8 +200,10 @@ class DisassembleView:
 
         if k in ('q', 'Q'):
             raise urwid.ExitMainLoop()
-        if k in ('g', 'G'):
+        elif k in ('g', 'G'):
             signals.set_prompt.send(self, text="Goto: ", callback=goto)
+        elif k in ('s', 'S'):
+            self.da.save()
 
     def sig_call_delay(self, sender, seconds, callback):
         def cb(*_):
