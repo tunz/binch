@@ -85,8 +85,6 @@ class CommandLine(urwid.WidgetWrap):
                 self.prompt_yn('y')
             elif k == "n" or k == "N":
                 self.prompt_yn('n')
-            else:
-                return k
 
 class StatusBar(urwid.WidgetWrap):
     def __init__(self, text):

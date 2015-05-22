@@ -158,7 +158,7 @@ class DisassembleView:
         self.body = urwid.Padding(self.disasmlist, 'center', 105)
         self.body = urwid.Filler(self.body, ('fixed top',1), ('fixed bottom',1))
 
-        self.footer = StatusBar("status bar")
+        self.footer = StatusBar("HotKeys -> g: Go to a address | s: Save | d: Remove | enter: Modify | q: Quit")
         self.view = DisassembleWindow(self,
                 urwid.AttrWrap(self.body, 'body'),
                 urwid.AttrWrap(self.header, 'head'),
