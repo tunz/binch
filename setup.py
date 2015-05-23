@@ -13,7 +13,7 @@ setup (
         description = 'a light ELF binary patch tool',
         author = 'Choongwoo Han',
         author_email = 'cwhan.tunz@gmail.com',
-        url = 'https://github.com/tunz/BINCH',
+        url = 'https://github.com/tunz/binch',
         license = 'MIT',
         classifiers=[
             'Development Status :: 3 - Alpha',
