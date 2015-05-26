@@ -13,12 +13,12 @@ class DisassembleText(urwid.Text):
         return key
 
 class DisassembleInstruction(urwid.WidgetWrap):
-    def __init__(self, instrSet, da, view):
+    def __init__(self, instr, da, view):
         urwid.WidgetWrap.__init__(self, None)
-        self.address = urwid.Text(instrSet[0])
-        self.opcode = urwid.Text(instrSet[1])
-        self.instr = urwid.Text(instrSet[2])
-        self.operands = urwid.Text(instrSet[3])
+        self.address = urwid.Text(hex(instr.address).rstrip('L'))
+        self.opcode = urwid.Text(' '.join(["%02x" % (j) for j in instr.bytes]))
+        self.instr = urwid.Text(instr.mnemonic)
+        self.operands = urwid.Text(instr.op_str)
         self.editMode = False
         self.da = da
         self.view = view
@@ -172,12 +172,12 @@ class DisassembleView:
         idx = 0
         self.index_map = dict()
         for i in body:
-            address = int(i.split('\t')[0].lstrip('0x'),16)
+            address = i.address
             if address in self.da.symtab:
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < "+self.da.symtab[address]+" >"))
                 idx+=2
-            items.append(DisassembleInstruction(i.split('\t'), self.da, self))
+            items.append(DisassembleInstruction(i, self.da, self))
             self.index_map[address] = idx
             idx+=1
 
