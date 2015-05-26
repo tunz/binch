@@ -50,6 +50,12 @@ class DisassembleInstruction(urwid.WidgetWrap):
         original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
         if len(opcode) < original_opcode_len:
             opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
+        elif len(opcode) > original_opcode_len:
+            safe_opcode_len = 0
+            for i in self.da.disasm(int(self.address.text, 16), 0x20):
+                if len(opcode) > safe_opcode_len:
+                    safe_opcode_len += len(i.bytes)
+            opcode = opcode.ljust(safe_opcode_len, "\x90") # Fill with nop
 
         self.da.writeMemory(int(self.address.text, 16), opcode)
 
