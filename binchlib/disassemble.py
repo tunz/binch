@@ -82,18 +82,7 @@ class Disassembler():
         self.md = Cs(arch, mode)
 
     def disasm(self, address, size=None):
-        count = 0
-        """
-        result=[]
-        for i in self.md.disasm(self.readMemory(address, size), address):
-            line = "0x%x\t%s\t%s\t%s" %(i.address,
-                    ' '.join(["%02x" % (j) for j in i.bytes]),
-                    i.mnemonic, i.op_str)
-            result.append(i)
-        """
-        result = [i for i in self.md.disasm(self.readMemory(address, size), address)]
-
-        return result
+        return [i for i in self.md.disasm(self.readMemory(address, size), address)]
 
     def save(self):
         def saveBinary(filename):
