@@ -2,30 +2,38 @@
 import os
 from subprocess import Popen, PIPE
 import signals
+import re
 
 def assemble(code, arch):
 
     asm_fd = open('.asm', 'w')
-
-    bit = {'x86':32,'x64': 64}[arch]
-    asm_fd.write("bits %d\n" % (bit))
-    
-    # TODO: Support rip
     asm_fd.write(code)
     asm_fd.close()
 
-    p = Popen(['nasm','-f','bin','-o','.opcode','.asm'], stderr=PIPE)
+    llvm_arch = {'x86':'x86','x64': 'x86-64'}[arch]
+
+    p = Popen(['llvm-mc',
+        '-x86-asm-syntax=intel',
+        '-arch=%s' % (llvm_arch),
+        '-assemble',
+        '-o','.binary',
+        '-show-encoding',
+        '.asm'
+        ], stderr=PIPE)
     p.wait()
-    err = p.stderr.readline()
+
+    err = p.stderr.read()
     if len(err) > 0:
         msg = "Error: "+err.strip()
         signals.set_message.send(0, message=msg, expire=2)
         return ""
 
     os.remove('.asm')
-    opcode_fd = open('.opcode','rb')
-    opcode = opcode_fd.read()
-    opcode_fd.close()
-    os.remove('.opcode')
+
+    data = open('.binary','r').read()
+    s = re.search("encoding: \[(.*)\]",data)
+    opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
+
+    os.remove('.binary')
 
     return opcode
