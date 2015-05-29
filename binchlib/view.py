@@ -13,8 +13,10 @@ class DisassembleText(urwid.Text):
         return key
 
 class DisassembleInstruction(urwid.WidgetWrap):
-    def __init__(self, instr, da, view):
+    def __init__(self, instrSet, da, view):
         urwid.WidgetWrap.__init__(self, None)
+        instr = instrSet[0]
+        self.isThumb = instrSet[1]
         self.address = urwid.Text(hex(instr.address).rstrip('L'))
         self.opcode = urwid.Text(' '.join(["%02x" % (j) for j in instr.bytes]))
         self.instr = urwid.Text(instr.mnemonic)
@@ -34,6 +36,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ('fixed', 10, self.instr),
             ('fixed', 55, self.operands)
             ])
+        self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
     def mode3(self):
         self._w = urwid.Columns([
@@ -41,6 +44,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ('fixed', 25, self.opcode),
             ('fixed', 65, self._editbox),
             ])
+        self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
     def modifyOpcode(self, opcode):
         if opcode == "":
@@ -165,7 +169,7 @@ class DisassembleView:
         self.body = urwid.Padding(self.disasmlist, 'center', 105)
         self.body = urwid.Filler(self.body, ('fixed top',1), ('fixed bottom',1))
 
-        self.footer = StatusBar("HotKeys -> g: Go to a address | s: Save | d: Remove | enter: Modify | q: Quit")
+        self.footer = StatusBar("HotKeys -> g: Go to a address | s: Save | d: Remove | enter: Modify | q: Quit", self)
         self.view = DisassembleWindow(self,
                 urwid.AttrWrap(self.body, 'body'),
                 urwid.AttrWrap(self.header, 'head'),
@@ -184,31 +188,37 @@ class DisassembleView:
         items = []
         idx = 0
         self.index_map = dict()
-        for i in body:
+        for i, isThumb in body:
             address = i.address
             if address in self.da.symtab:
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < "+self.da.symtab[address]+" >"))
                 idx+=2
-            if (self.da.isThumb(address) and (address - 1) in self.da.symtab):
+            if (isThumb and (address - 1) in self.da.symtab):
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < "+self.da.symtab[address - 1]+" >"))
                 idx+=2
-            items.append(DisassembleInstruction(i, self.da, self))
+            items.append(DisassembleInstruction((i, isThumb), self.da, self))
             self.index_map[address] = idx
             idx+=1
 
-        items = map(lambda x: urwid.AttrMap(x, 'bg', 'reveal focus'), items)
         return items
 
     def updateList(self, focus=0):
         items = self.setupList()
         self.disasmlist.updateList(items, focus)
 
+    def update_status(self, *arg):
+        signals.redraw_status.send(self)
+        self.loop.set_alarm_in(0.03, self.update_status)
+
     def main(self):
         self.loop = urwid.MainLoop(self.view, self.palette,
                 handle_mouse=False,
                 unhandled_input=self.unhandled_input)
+
+        self.loop.set_alarm_in(0.03, self.update_status)
+
         self.loop.run()
 
     def unhandled_input(self, k):

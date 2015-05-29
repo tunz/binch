@@ -110,14 +110,14 @@ class Disassembler():
             for addr, isThumb in self.thumbtab:
                 if address < addr:
                     if thumb:
-                        disasms.extend([i for i in self.t_md.disasm(self.readMemory(address, addr-address), address)])
+                        disasms.extend([(i, True) for i in self.t_md.disasm(self.readMemory(address, addr-address), address)])
                     else:
-                        disasms.extend([i for i in self.md.disasm(self.readMemory(address, addr-address), address)])
+                        disasms.extend([(i, False) for i in self.md.disasm(self.readMemory(address, addr-address), address)])
                 address = addr
                 thumb = isThumb
             return disasms
         else:
-            return [i for i in self.md.disasm(self.readMemory(address, size), address)]
+            return [(i, False) for i in self.md.disasm(self.readMemory(address, size), address)]
 
     def save(self):
         def saveBinary(filename):

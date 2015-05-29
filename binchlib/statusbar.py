@@ -87,10 +87,29 @@ class CommandLine(urwid.WidgetWrap):
                 self.prompt_yn('n')
 
 class StatusBar(urwid.WidgetWrap):
-    def __init__(self, text):
+    def __init__(self, text, view):
         urwid.WidgetWrap.__init__(self, None)
+        self.view = view
         self.commandline = CommandLine() 
-        self.status = urwid.WidgetWrap(urwid.Text(text))
+        self.defaultText = text
+        self.update_status()
+        signals.redraw_status.connect(self.sig_redraw_status)
+
+    def sig_redraw_status(self, sender):
+        self.update_status()
+
+    def update_status(self):
+        if self.view.da.arch == 'ARM':
+            if self.view.disasmlist._w.focus.isThumb:
+                mode = "[Thumb]"
+            else:
+                mode = "[ ARM ]"
+            self.status = urwid.Columns([
+                urwid.WidgetWrap(urwid.Text(self.defaultText)),
+                ('fixed', 20, urwid.WidgetWrap(urwid.Text(mode)))
+                ])
+        else:
+            self.status = urwid.WidgetWrap(urwid.Text(self.defaultText))
         self.status = urwid.AttrMap(self.status, 'status')
         self._w = urwid.Pile([self.status, self.commandline])
 
