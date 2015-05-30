@@ -49,6 +49,9 @@ class Disassembler():
 
         self.arch = self.elf.get_machine_arch()
 
+        if self.arch == 'ARM':
+            self.arm_arch = self.get_tag_cpu_arch()
+
         # Load code segments
         for elf_segment in self.elf.iter_segments():
             if elf_segment.header.p_type != 'PT_LOAD':
@@ -150,3 +153,57 @@ class Disassembler():
             return True
         else:
             return False
+
+    def get_tag_cpu_arch(self):
+        from struct import unpack
+        tag_list = [
+                'Pre_v4',
+                'v4',       # e.g. SA110
+                'v4T',      # e.g. ARM7TDMI
+                'v5T',      # e.g. ARM9TDMI
+                'v5TE',     # e.g. ARM946E_S
+                'v5TEJ',    # e.g. ARM926EJ_S
+                'v6',       # e.g. ARM1136J_S
+                'v6KZ',     # e.g. ARM1176JZ_S
+                'v6T2',     # e.g. ARM1156T2_S
+                'v6K',      # e.g. ARM1176JZ_S
+                'v7',       # e.g. Cortex A8, Cortex M3
+                'v6_M',     # e.g. Cortex M1
+                'v6S_M',    # v6_M with the System extensions
+                'v7E_M',    # v7_M with DSP extensions
+                'v8'        # v8,v8.1a AArch32
+                ]
+
+        attr = self.elf.get_section_by_name('.ARM.attributes')
+        attr_data = attr.data()
+
+        if attr_data[0] != 'A':
+            return ""
+
+        idx = 1
+        size = unpack('<L', attr_data[idx:idx+4])[0]
+        idx += 4
+
+        if attr_data[idx:idx+5] != "aeabi":
+            return ""
+        idx += 6
+
+        while idx - 1 < size:
+            tag_number = attr_data[idx]
+            idx += 1
+            if tag_number in "\x04\x05\x67\x32":
+                idx = attr_data.find("\x00",idx) + 1
+            else:
+                result = 0
+                shift = 0
+                while True:
+                    byte = unpack('B', attr_data[idx])[0]
+                    idx += 1
+                    result |= ((byte & 0x7F) << shift)
+                    if (byte & 0x80) == 0:
+                        break
+                    shift += 7
+                if tag_number == "\x06": # tag_arch
+                    return tag_list[result]
+
+        return ""

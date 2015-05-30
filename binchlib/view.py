@@ -56,7 +56,12 @@ class DisassembleInstruction(urwid.WidgetWrap):
             opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
         elif len(opcode) > original_opcode_len:
             safe_opcode_len = 0
-            for i in self.da.disasm(int(self.address.text, 16), 0x20):
+            opcode_data = self.da.readMemory(int(self.address.text, 16), 0x20)
+            if self.isThumb:
+                disasm_code = self.da.t_md.disasm(opcode_data, 0x20)
+            else:
+                disasm_code = self.da.md.disasm(opcode_data, 0x20)
+            for i in disasm_code:
                 if len(opcode) > safe_opcode_len:
                     safe_opcode_len += len(i.bytes)
             opcode = opcode.ljust(safe_opcode_len, "\x90") # Fill with nop
@@ -65,7 +70,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
         if original_opcode_len == len(opcode):
             self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
-            code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
+            if self.isThumb:
+                code = [i for i in self.da.t_md.disasm(opcode, len(opcode))][0]
+            else:
+                code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
             self.operands.set_text(code.op_str)
             self.mode4()
@@ -80,7 +88,13 @@ class DisassembleInstruction(urwid.WidgetWrap):
             elif key == "enter":
                 self.editMode = False
                 asmcode = self._editbox.get_edit_text()
-                opcode = assemble(asmcode, self.da.arch)
+                if self.da.arch == 'ARM':
+                    if self.isThumb:
+                        opcode = assemble(asmcode, 'thumb', self.da.arm_arch)
+                    else:
+                        opcode = assemble(asmcode, self.da.arch, self.da.arm_arch)
+                else:
+                    opcode = assemble(asmcode, self.da.arch)
                 self.modifyOpcode(opcode)
             elif isinstance(key, basestring):
                 self._w.keypress(size, key)

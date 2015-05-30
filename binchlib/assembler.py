@@ -7,7 +7,7 @@ import re
 def cmd_exists(cmd):
     return call("type "+cmd, shell=True, stdout=PIPE, stderr=PIPE) == 0
 
-def assemble(code, arch):
+def assemble(code, arch, arm_arch=None):
 
     if cmd_exists("llvm-mc"):
 
@@ -15,16 +15,24 @@ def assemble(code, arch):
         asm_fd.write(code)
         asm_fd.close()
 
-        llvm_arch = {'x86':'x86','x64': 'x86-64'}[arch]
+        llvm_arch = {'x86':'x86','x64':'x86-64','ARM':'arm','thumb':'thumb'}[arch]
 
-        p = Popen(['llvm-mc',
-            '-x86-asm-syntax=intel',
-            '-arch=%s' % (llvm_arch),
+        args = ['llvm-mc',
             '-assemble',
             '-o','.opcode',
             '-show-encoding',
             '.asm'
-            ], stderr=PIPE)
+            ]
+
+        if arm_arch:
+            args.append('--triple=%s%s' % (llvm_arch, arm_arch))
+        else:
+            args.append('-arch=%s' % (llvm_arch))
+
+        if arch in ['x86', 'x64']:
+            args.append('-x86-asm-syntax=intel')
+
+        p = Popen(args, stderr=PIPE)
         p.wait()
 
         err = p.stderr.read()
