@@ -1,39 +1,74 @@
 
 import os
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, call
 import signals
 import re
 
+def cmd_exists(cmd):
+    return call("type "+cmd, shell=True, stdout=PIPE, stderr=PIPE) == 0
+
 def assemble(code, arch):
 
-    asm_fd = open('.asm', 'w')
-    asm_fd.write(code)
-    asm_fd.close()
+    if cmd_exists("llvm-mc"):
 
-    llvm_arch = {'x86':'x86','x64': 'x86-64'}[arch]
+        asm_fd = open('.asm', 'w')
+        asm_fd.write(code)
+        asm_fd.close()
 
-    p = Popen(['llvm-mc',
-        '-x86-asm-syntax=intel',
-        '-arch=%s' % (llvm_arch),
-        '-assemble',
-        '-o','.binary',
-        '-show-encoding',
-        '.asm'
-        ], stderr=PIPE)
-    p.wait()
+        llvm_arch = {'x86':'x86','x64': 'x86-64'}[arch]
 
-    err = p.stderr.read()
-    if len(err) > 0:
-        msg = "Error: "+err.strip()
+        p = Popen(['llvm-mc',
+            '-x86-asm-syntax=intel',
+            '-arch=%s' % (llvm_arch),
+            '-assemble',
+            '-o','.opcode',
+            '-show-encoding',
+            '.asm'
+            ], stderr=PIPE)
+        p.wait()
+
+        err = p.stderr.read()
+        if len(err) > 0:
+            os.remove('.asm')
+            msg = "Error: "+err.strip()
+            signals.set_message.send(0, message=msg, expire=2)
+            return ""
+
+        data = open('.opcode','r').read()
+        s = re.search("encoding: \[(.*)\]",data)
+        opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
+
+    elif cmd_exists("nasm"):
+
+        msg = "Warning: Please use llvm-mc, instead of nasm."
         signals.set_message.send(0, message=msg, expire=2)
-        return ""
+
+        asm_fd = open('.asm', 'w')
+
+        bit = {'x86':32,'x64': 64}[arch]
+        asm_fd.write("bits %d\n" % (bit))
+
+        # TODO: Support rip
+        if "ptr" in code:
+            if code.startswith("lea"):
+                code = re.sub(r'(qword|dword|word|byte) ptr ','', code)
+            else:
+                code = code.replace('ptr ','')
+        asm_fd.write(code)
+        asm_fd.close()
+
+        p = Popen(['nasm','-f','bin','-o','.opcode','.asm'], stderr=PIPE)
+        p.wait()
+        err = p.stderr.read()
+        if len(err) > 0:
+            os.remove('.asm')
+            msg = "Error: "+err.strip()
+            signals.set_message.send(0, message=msg, expire=2)
+            return ""
+
+        opcode = open('.opcode','rb').read()
 
     os.remove('.asm')
-
-    data = open('.binary','r').read()
-    s = re.search("encoding: \[(.*)\]",data)
-    opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
-
-    os.remove('.binary')
+    os.remove('.opcode')
 
     return opcode
