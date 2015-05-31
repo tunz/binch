@@ -3,7 +3,7 @@ A light ELF binary patch tool in python urwid. It helps to patch a ELF binary in
 
 ![capture](./img/screenshot.png)
 
-Now, it only supports x86 (+ x86_64). But I also have a plan to support ARM.
+Now, it only supports x86, x86_64, and ARM(experimental).
 
 ## Usage
 
