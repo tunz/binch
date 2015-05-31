@@ -44,7 +44,12 @@ def assemble(code, arch, arm_arch=None):
 
         data = open('.opcode','r').read()
         s = re.search("encoding: \[(.*)\]",data)
-        opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
+        if s:
+            opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
+        else:
+            msg = "Error: No assembled code"
+            signals.set_message.send(0, message=msg, expire=2)
+            return ""
 
     elif cmd_exists("nasm"):
 
