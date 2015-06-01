@@ -3,6 +3,7 @@ from disassemble import *
 from assembler import *
 from statusbar import *
 import signals
+import traceback
 
 class DisassembleText(urwid.Text):
 
@@ -233,7 +234,11 @@ class DisassembleView:
 
         self.loop.set_alarm_in(0.03, self.update_status)
 
-        self.loop.run()
+        try:
+            self.loop.run()
+        except:
+            self.loop.stop()
+            print traceback.format_exc()
 
     def unhandled_input(self, k):
         def goto(text):
