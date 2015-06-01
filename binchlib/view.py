@@ -54,7 +54,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
         original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
         if len(opcode) < original_opcode_len:
-            opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
+            if self.da.arch == 'ARM':
+                opcode = opcode.ljust(original_opcode_len, "\x00") # Fill with nop
+            else:
+                opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
         elif len(opcode) > original_opcode_len:
             safe_opcode_len = 0
             opcode_data = self.da.readMemory(int(self.address.text, 16), 0x20)
@@ -65,7 +68,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
             for i in disasm_code:
                 if len(opcode) > safe_opcode_len:
                     safe_opcode_len += len(i.bytes)
-            opcode = opcode.ljust(safe_opcode_len, "\x90") # Fill with nop
+            if self.da.arch == 'ARM':
+                opcode = opcode.ljust(safe_opcode_len, "\x00") # Fill with nop
+            else:
+                opcode = opcode.ljust(safe_opcode_len, "\x90") # Fill with nop
 
         self.da.writeMemory(int(self.address.text, 16), opcode)
 
@@ -109,7 +115,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
             elif key == "d" or key == "D":
                 def fillWithNop(yn, arg):
                     if yn == 'y':
-                        self.modifyOpcode("\x90")
+                        if self.da.arch == 'ARM':
+                            self.modifyOpcode("\x00")
+                        else:
+                            self.modifyOpcode("\x90")
                 signals.set_prompt_yn.send(self, text="Remove this line?", callback=fillWithNop, arg=None)
             else:
                 if key == "j" or key == "J":
