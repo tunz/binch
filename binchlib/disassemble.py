@@ -92,7 +92,7 @@ class Disassembler():
 
         self.thumbtab.sort(key=lambda tup: tup[0])
 
-        text_section = self.elf.get_section_by_name(b'.text')
+        text_section = self.elf.get_section_by_name('.text')
         self.text = text_section.data()
         self.text_addr = text_section['sh_addr']
         self.text_size = text_section['sh_size']

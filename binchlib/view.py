@@ -223,7 +223,7 @@ class DisassembleView:
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < "+self.da.symtab[address]+" >"))
                 idx+=2
-            if (isThumb and (address - 1) in self.da.symtab):
+            elif (isThumb and (address - 1) in self.da.symtab):
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < "+self.da.symtab[address - 1]+" >"))
                 idx+=2
