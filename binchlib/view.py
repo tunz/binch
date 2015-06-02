@@ -188,7 +188,9 @@ class DisassembleView:
 
         items = self.setupList()
         self.disasmlist = DisassembleList(items)
-        self.disasmlist.set_focus(self.findIndex(self.da.entry))
+        start_index = self.findIndex(self.da.entry)
+        if start_index != -1:
+            self.disasmlist.set_focus(start_index)
 
         self.body = urwid.Padding(self.disasmlist, 'center', 105)
         self.body = urwid.Filler(self.body, ('fixed top',1), ('fixed bottom',1))
@@ -202,10 +204,13 @@ class DisassembleView:
         signals.call_delay.connect(self.sig_call_delay)
 
     def findIndex(self, address):
-        if self.da.isThumb(address):
-            return self.index_map[address & -2]
-        else:
-            return self.index_map[address]
+        try:
+            if self.da.isThumb(address):
+                return self.index_map[address & -2]
+            else:
+                return self.index_map[address]
+        except:
+            return -1
 
     def setupList(self):
         body = self.da.disasm(self.da.text_addr)
