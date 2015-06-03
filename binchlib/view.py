@@ -209,7 +209,7 @@ class DisassembleView:
                 return self.index_map[address & -2]
             else:
                 return self.index_map[address]
-        except:
+        except KeyError:
             return -1
 
     def setupList(self):
