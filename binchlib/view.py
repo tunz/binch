@@ -23,14 +23,15 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self.instr = urwid.Text(instr.mnemonic)
         self.operands = urwid.Text(instr.op_str)
         self.editMode = False
+        self.hexEditMode = False
         self.da = da
         self.view = view
-        self.mode4()
+        self.mode_plain()
 
     def selectable(self):
         return True
 
-    def mode4(self):
+    def mode_plain(self):
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self.opcode),
@@ -39,11 +40,20 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
-    def mode3(self):
+    def mode_edit1(self):
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self.opcode),
             ('fixed', 65, self._editbox),
+            ])
+        self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
+
+    def mode_edit2(self):
+        self._w = urwid.Columns([
+            ('fixed', 12, self.address),
+            ('fixed', 25, self._hexeditbox),
+            ('fixed', 10, self.instr),
+            ('fixed', 55, self.operands)
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
@@ -83,7 +93,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
             self.operands.set_text(code.op_str)
-            self.mode4()
+            self.mode_plain()
         else:
             self.view.updateList(self.view.disasmlist._w.focus_position)
 
@@ -91,7 +101,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
         if self.editMode:
             if key == "esc":
                 self.editMode = False
-                self.mode4()
+                self.mode_plain()
             elif key == "enter":
                 self.editMode = False
                 asmcode = self._editbox.get_edit_text()
@@ -107,11 +117,34 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self._w.keypress(size, key)
             else:
                 return key
+        elif self.hexEditMode:
+            if key == "esc":
+                self.hexEditMode = False
+                self.mode_plain()
+            elif key == "enter":
+                self.hexEditMode = False
+                hexcode = self._hexeditbox.get_edit_text()
+                try:
+                    opcode = hexcode.replace(' ','').decode('hex')
+                    self.modifyOpcode(opcode)
+                except Exception, e:
+                    msg = "Error: "+str(e)
+                    signals.set_message.send(0, message=msg, expire=2)
+                    self.mode_plain()
+
+            elif isinstance(key, basestring):
+                self._w.keypress(size, key)
+            else:
+                return key
         else:
             if key == "enter":
                 self._editbox = urwid.Edit("", self.instr.text+" "+self.operands.text)
-                self.mode3()
+                self.mode_edit1()
                 self.editMode = True
+            elif key == "h":
+                self._hexeditbox = urwid.Edit("", self.opcode.text)
+                self.mode_edit2()
+                self.hexEditMode = True
             elif key == "d" or key == "D":
                 def fillWithNop(yn, arg):
                     if yn == 'y':

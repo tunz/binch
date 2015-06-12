@@ -18,6 +18,7 @@ d: Remove a current line. (Fill with nop)
 q: Quit.
 s: Save a modified binary to a file.
 enter: Modify a current line.
+h: Modify hex bytes of a current line.
 ```
 
 ## Dependencies
