@@ -57,7 +57,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
-    def modifyOpcode(self, opcode):
+    def modifyOpcode(self, opcode, updateAll=False):
         if opcode == "":
             self.mode4()
             return
@@ -92,8 +92,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             else:
                 code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
-            if (code.mnemonic[0] == 'j' and self.da.arch != 'ARM' or
-                code.mnemonic[0] == 'b' and self.da.arch == 'ARM'):
+            if updateAll:
                 self.view.updateList(self.view.disasmlist._w.focus_position)
             else:
                 self.operands.set_text(code.op_str)
@@ -131,7 +130,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 original_hexcode = self.opcode.text.replace(' ','').decode('hex')
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
-                    self.modifyOpcode(opcode)
+                    self.modifyOpcode(opcode, True)
                 except Exception, e:
                     msg = "Error: "+str(e)
                     self.modifyOpcode(original_hexcode)
