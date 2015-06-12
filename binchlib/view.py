@@ -92,8 +92,12 @@ class DisassembleInstruction(urwid.WidgetWrap):
             else:
                 code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
-            self.operands.set_text(code.op_str)
-            self.mode_plain()
+            if (code.mnemonic[0] == 'j' and self.da.arch != 'ARM' or
+                code.mnemonic[0] == 'b' and self.da.arch == 'ARM'):
+                self.view.updateList(self.view.disasmlist._w.focus_position)
+            else:
+                self.operands.set_text(code.op_str)
+                self.mode_plain()
         else:
             self.view.updateList(self.view.disasmlist._w.focus_position)
 
@@ -124,11 +128,13 @@ class DisassembleInstruction(urwid.WidgetWrap):
             elif key == "enter":
                 self.hexEditMode = False
                 hexcode = self._hexeditbox.get_edit_text()
+                original_hexcode = self.opcode.text.replace(' ','').decode('hex')
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
                     self.modifyOpcode(opcode)
                 except Exception, e:
                     msg = "Error: "+str(e)
+                    self.modifyOpcode(original_hexcode)
                     signals.set_message.send(0, message=msg, expire=2)
                     self.mode_plain()
 
