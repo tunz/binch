@@ -57,12 +57,16 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
-    def modifyOpcode(self, opcode, updateAll=False):
+    def modifyOpcode(self, opcode, original_opcode=None):
         if opcode == "":
             self.mode4()
             return
 
-        original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
+        if original_opcode:
+            original_opcode_len = len(original_opcode)
+        else:
+            original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
+
         if len(opcode) < original_opcode_len:
             if self.da.arch == 'ARM':
                 opcode = opcode.ljust(original_opcode_len, "\x00") # Fill with nop
@@ -92,11 +96,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
             else:
                 code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
-            if updateAll:
-                self.view.updateList(self.view.disasmlist._w.focus_position)
-            else:
-                self.operands.set_text(code.op_str)
-                self.mode_plain()
+            self.operands.set_text(code.op_str)
+            self.mode_plain()
         else:
             self.view.updateList(self.view.disasmlist._w.focus_position)
 
@@ -130,10 +131,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 original_hexcode = self.opcode.text.replace(' ','').decode('hex')
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
-                    self.modifyOpcode(opcode, True)
+                    self.modifyOpcode(opcode, original_hexcode)
                 except Exception, e:
                     msg = "Error: "+str(e)
-                    self.modifyOpcode(original_hexcode)
+                    self.modifyOpcode(original_hexcode, original_hexcode)
                     signals.set_message.send(0, message=msg, expire=2)
                     self.mode_plain()
 
