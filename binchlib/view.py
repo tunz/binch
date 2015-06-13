@@ -59,7 +59,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
     def modifyOpcode(self, opcode, original_opcode=None):
         if opcode == "":
-            self.mode4()
+            self.mode_plain()
             return
 
         if original_opcode == None:
