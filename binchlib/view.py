@@ -62,10 +62,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
             self.mode4()
             return
 
-        if original_opcode:
-            original_opcode_len = len(original_opcode)
-        else:
-            original_opcode_len = len(self.opcode.text.replace(' ','').decode('hex'))
+        if original_opcode == None:
+            original_opcode = self.opcode.text.replace(' ','').decode('hex')
+
+        original_opcode_len = len(original_opcode)
 
         if len(opcode) < original_opcode_len:
             if self.da.arch == 'ARM':
@@ -99,7 +99,17 @@ class DisassembleInstruction(urwid.WidgetWrap):
             self.operands.set_text(code.op_str)
             self.mode_plain()
         else:
-            self.view.updateList(self.view.disasmlist._w.focus_position)
+            def updateAll(yn, arg):
+                if yn == "y":
+                    self.view.updateList(self.view.disasmlist._w.focus_position)
+                else:
+                    self.modifyOpcode(original_opcode)
+
+            signals.set_prompt_yn.send(self,
+                    text="This operation will break folloing codes, is it okey?",
+                    callback=updateAll,
+                    arg=None
+                    )
 
     def keypress(self, size, key):
         if self.editMode:
