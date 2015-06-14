@@ -2,6 +2,8 @@ import urwid
 from disassemble import *
 from assembler import *
 from statusbar import *
+from capstone.x86 import X86_OP_IMM
+from capstone.arm import ARM_OP_IMM
 import signals
 import traceback
 
@@ -92,10 +94,21 @@ class DisassembleInstruction(urwid.WidgetWrap):
         if original_opcode_len == len(opcode):
             self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
             if self.isThumb:
+                self.da.t_md.detail = True
                 code = [i for i in self.da.t_md.disasm(opcode, len(opcode))][0]
             else:
+                self.da.md.detail = True
                 code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
+
+            if (len(code.operands) == 1 and
+                ((self.da.arch in ['x86','x64'] and code.operands[0].type == X86_OP_IMM) or
+                        (self.da.arch == 'ARM' and code.operands[0].type == ARM_OP_IMM))):
+                self.view.updateList(self.view.disasmlist._w.focus_position)
+            else:
+                self.operands.set_text(code.op_str)
+                self.mode_plain()
+
             self.operands.set_text(code.op_str)
             self.mode_plain()
         else:

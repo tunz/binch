@@ -9,7 +9,7 @@ py_modules = [
 
 setup (
         name = 'binch',
-        version = '0.2.8',
+        version = '0.2.9',
         description = 'a light ELF binary patch tool',
         author = 'Choongwoo Han',
         author_email = 'cwhan.tunz@gmail.com',
