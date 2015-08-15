@@ -184,6 +184,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 if followAddress:
                     address = int(self.operands.text.lstrip('#'), 16)
                     self.view.disasmlist.set_focus(self.view.index_map[address])
+                    self.view.history.append(self.address.text)
                     return "Jump to "+hex(address)
             elif key == "d" or key == "D":
                 def fillWithNop(yn, arg):
@@ -265,6 +266,8 @@ class DisassembleView:
         if start_index != -1:
             self.disasmlist.set_focus(start_index)
 
+        self.history = list()
+
         self.body = urwid.Padding(self.disasmlist, 'center', 105)
         self.body = urwid.Filler(self.body, ('fixed top',1), ('fixed bottom',1))
 
@@ -335,14 +338,17 @@ class DisassembleView:
                 return "It is not hexadecimal number: "+text
 
             if address in self.index_map:
+                self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].address.text)
                 self.disasmlist.set_focus(self.index_map[address])
                 return "Jump to "+hex(address)
             else:
                 for i in range(1, 0x10):
                     if address - i in self.index_map:
+                        self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].address.text)
                         self.disasmlist.set_focus(self.index_map[address - i])
                         return "Jump to "+hex(address - i)
                     elif address + i in self.index_map:
+                        self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].address.text)
                         self.disasmlist.set_focus(self.index_map[address + i])
                         return "Jump to "+hex(address + i)
 
@@ -357,6 +363,11 @@ class DisassembleView:
             signals.set_prompt.send(self, text="Goto: ", callback=goto)
         elif k in ('s', 'S'):
             self.da.save()
+        elif k == "esc":
+            if len(self.history) > 0:
+                address = int(self.history[-1],16)
+                del self.history[-1]
+                self.disasmlist.set_focus(self.index_map[address])
 
     def sig_call_delay(self, sender, seconds, callback):
         def cb(*_):
