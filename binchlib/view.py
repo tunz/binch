@@ -19,6 +19,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
     def __init__(self, instrSet, da, view):
         urwid.WidgetWrap.__init__(self, None)
         instr = instrSet[0]
+        self.instruction = instr
         self.isThumb = instrSet[1]
         self.address = urwid.Text(hex(instr.address).rstrip('L'))
         self.opcode = urwid.Text(' '.join(["%02x" % (j) for j in instr.bytes]))
@@ -94,10 +95,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         if original_opcode_len == len(opcode):
             self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
             if self.isThumb:
-                self.da.t_md.detail = True
                 code = [i for i in self.da.t_md.disasm(opcode, len(opcode))][0]
             else:
-                self.da.md.detail = True
                 code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
 
@@ -174,6 +173,18 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self._hexeditbox = urwid.Edit("", self.opcode.text)
                 self.mode_edit2()
                 self.hexEditMode = True
+            elif key == "f":
+                followAddress = False
+                if self.da.arch in ['x86', 'x64'] and (self.instr.text[0] == 'j' or self.instr.text == 'call'):
+                    if self.instruction.operands[0].type == X86_OP_IMM:
+                        followAddress = True
+                elif self.da.arch == 'ARM' and self.instr.text[0] == 'b':
+                    if self.instruction.operands[0].type == ARM_OP_IMM:
+                        followAddress = True
+                if followAddress:
+                    address = int(self.operands.text.lstrip('#'), 16)
+                    self.view.disasmlist.set_focus(self.view.index_map[address])
+                    return "Jump to "+hex(address)
             elif key == "d" or key == "D":
                 def fillWithNop(yn, arg):
                     if yn == 'y':

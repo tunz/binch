@@ -100,8 +100,10 @@ class Disassembler():
         arch = {'x86':CS_ARCH_X86,'x64':CS_ARCH_X86, 'ARM':CS_ARCH_ARM}[self.arch]
         mode = {'x86':CS_MODE_32, 'x64':CS_MODE_64, 'ARM':CS_MODE_ARM}[self.arch]
         self.md = Cs(arch, mode)
+        self.md.detail = True
         if self.arch == 'ARM':
             self.t_md = Cs(arch, CS_MODE_THUMB)
+            self.t_md.detail = True
 
     def disasm(self, address, size=None):
         if self.arch == 'ARM':
