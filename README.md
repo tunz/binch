@@ -19,6 +19,7 @@ q: Quit.
 s: Save a modified binary to a file.
 enter: Modify a current line.
 h: Modify hex bytes of a current line.
+f: follow the address of jmp or call instructions.
 ```
 
 ## Dependencies
