@@ -16,18 +16,18 @@ class DisassembleText(urwid.Text):
         return key
 
 class DisassembleInstruction(urwid.WidgetWrap):
-    def __init__(self, instrSet, da, view):
+    def __init__(self, instrSet, disasmblr, view):
         urwid.WidgetWrap.__init__(self, None)
         instr = instrSet[0]
         self.instruction = instr
-        self.isThumb = instrSet[1]
+        self.isthumb = instrSet[1]
         self.address = urwid.Text(hex(instr.address).rstrip('L'))
         self.opcode = urwid.Text(' '.join(["%02x" % (j) for j in instr.bytes]))
         self.instr = urwid.Text(instr.mnemonic)
         self.operands = urwid.Text(instr.op_str)
-        self.editMode = False
-        self.hexEditMode = False
-        self.da = da
+        self.edit_mode = False
+        self.hex_edit_mode = False
+        self.disasmblr = disasmblr
         self.view = view
         self.mode_plain()
 
@@ -60,7 +60,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
-    def modifyOpcode(self, opcode, original_opcode=None):
+    def modify_opcode(self, opcode, original_opcode=None):
         if opcode == "":
             self.mode_plain()
             return
@@ -71,39 +71,39 @@ class DisassembleInstruction(urwid.WidgetWrap):
         original_opcode_len = len(original_opcode)
 
         if len(opcode) < original_opcode_len:
-            if self.da.arch == 'ARM':
+            if self.disasmblr.arch == 'ARM':
                 opcode = opcode.ljust(original_opcode_len, "\x00") # Fill with nop
             else:
                 opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
         elif len(opcode) > original_opcode_len:
             safe_opcode_len = 0
-            opcode_data = self.da.readMemory(int(self.address.text, 16), 0x20)
-            if self.isThumb:
-                disasm_code = self.da.t_md.disasm(opcode_data, 0x20)
+            opcode_data = self.disasmblr.read_memory(int(self.address.text, 16), 0x20)
+            if self.isthumb:
+                disasm_code = self.disasmblr.t_md.disasm(opcode_data, 0x20)
             else:
-                disasm_code = self.da.md.disasm(opcode_data, 0x20)
+                disasm_code = self.disasmblr.md.disasm(opcode_data, 0x20)
             for i in disasm_code:
                 if len(opcode) > safe_opcode_len:
                     safe_opcode_len += len(i.bytes)
-            if self.da.arch == 'ARM':
+            if self.disasmblr.arch == 'ARM':
                 opcode = opcode.ljust(safe_opcode_len, "\x00") # Fill with nop
             else:
                 opcode = opcode.ljust(safe_opcode_len, "\x90") # Fill with nop
 
-        self.da.writeMemory(int(self.address.text, 16), opcode)
+        self.disasmblr.write_memory(int(self.address.text, 16), opcode)
 
         if original_opcode_len == len(opcode):
             self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
-            if self.isThumb:
-                code = [i for i in self.da.t_md.disasm(opcode, len(opcode))][0]
+            if self.isthumb:
+                code = [i for i in self.disasmblr.t_md.disasm(opcode, len(opcode))][0]
             else:
-                code = [i for i in self.da.md.disasm(opcode, len(opcode))][0]
+                code = [i for i in self.disasmblr.md.disasm(opcode, len(opcode))][0]
             self.instr.set_text(code.mnemonic)
 
             if (len(code.operands) == 1 and
-                ((self.da.arch in ['x86','x64'] and code.operands[0].type == X86_OP_IMM) or
-                        (self.da.arch == 'ARM' and code.operands[0].type == ARM_OP_IMM))):
-                self.view.updateList(self.view.disasmlist._w.focus_position)
+                ((self.disasmblr.arch in ['x86','x64'] and code.operands[0].type == X86_OP_IMM) or
+                        (self.disasmblr.arch == 'ARM' and code.operands[0].type == ARM_OP_IMM))):
+                self.view.update_list(self.view.disasmlist._w.focus_position)
             else:
                 self.operands.set_text(code.op_str)
                 self.mode_plain()
@@ -111,52 +111,52 @@ class DisassembleInstruction(urwid.WidgetWrap):
             self.operands.set_text(code.op_str)
             self.mode_plain()
         else:
-            def updateAll(yn, arg):
+            def update_all(yn, arg):
                 if yn == "y":
-                    self.view.updateList(self.view.disasmlist._w.focus_position)
+                    self.view.update_list(self.view.disasmlist._w.focus_position)
                 else:
-                    self.modifyOpcode(original_opcode)
+                    self.modify_opcode(original_opcode)
 
             signals.set_prompt_yn.send(self,
                     text="This operation will break folloing codes, is it okey?",
-                    callback=updateAll,
+                    callback=update_all,
                     arg=None
                     )
 
     def keypress(self, size, key):
-        if self.editMode:
+        if self.edit_mode:
             if key == "esc":
-                self.editMode = False
+                self.edit_mode = False
                 self.mode_plain()
             elif key == "enter":
-                self.editMode = False
+                self.edit_mode = False
                 asmcode = self._editbox.get_edit_text()
-                if self.da.arch == 'ARM':
-                    if self.isThumb:
-                        opcode = assemble(asmcode, 'thumb', self.da.arm_arch)
+                if self.disasmblr.arch == 'ARM':
+                    if self.isthumb:
+                        opcode = assemble(asmcode, 'thumb', self.disasmblr.arm_arch)
                     else:
-                        opcode = assemble(asmcode, self.da.arch, self.da.arm_arch)
+                        opcode = assemble(asmcode, self.disasmblr.arch, self.disasmblr.arm_arch)
                 else:
-                    opcode = assemble(asmcode, self.da.arch)
-                self.modifyOpcode(opcode)
+                    opcode = assemble(asmcode, self.disasmblr.arch)
+                self.modify_opcode(opcode)
             elif isinstance(key, basestring):
                 self._w.keypress(size, key)
             else:
                 return key
-        elif self.hexEditMode:
+        elif self.hex_edit_mode:
             if key == "esc":
-                self.hexEditMode = False
+                self.hex_edit_mode = False
                 self.mode_plain()
             elif key == "enter":
-                self.hexEditMode = False
+                self.hex_edit_mode = False
                 hexcode = self._hexeditbox.get_edit_text()
                 original_hexcode = self.opcode.text.replace(' ','').decode('hex')
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
-                    self.modifyOpcode(opcode, original_hexcode)
+                    self.modify_opcode(opcode, original_hexcode)
                 except Exception, e:
                     msg = "Error: "+str(e)
-                    self.modifyOpcode(original_hexcode, original_hexcode)
+                    self.modify_opcode(original_hexcode, original_hexcode)
                     signals.set_message.send(0, message=msg, expire=2)
                     self.mode_plain()
 
@@ -168,17 +168,17 @@ class DisassembleInstruction(urwid.WidgetWrap):
             if key == "enter":
                 self._editbox = urwid.Edit("", self.instr.text+" "+self.operands.text)
                 self.mode_edit1()
-                self.editMode = True
+                self.edit_mode = True
             elif key == "h":
                 self._hexeditbox = urwid.Edit("", self.opcode.text)
                 self.mode_edit2()
-                self.hexEditMode = True
+                self.hex_edit_mode = True
             elif key == "f":
                 followAddress = False
-                if self.da.arch in ['x86', 'x64'] and (self.instr.text[0] == 'j' or self.instr.text == 'call'):
+                if self.disasmblr.arch in ['x86', 'x64'] and (self.instr.text[0] == 'j' or self.instr.text == 'call'):
                     if self.instruction.operands[0].type == X86_OP_IMM:
                         followAddress = True
-                elif self.da.arch == 'ARM' and self.instr.text[0] == 'b':
+                elif self.disasmblr.arch == 'ARM' and self.instr.text[0] == 'b':
                     if self.instruction.operands[0].type == ARM_OP_IMM:
                         followAddress = True
                 if followAddress:
@@ -187,13 +187,13 @@ class DisassembleInstruction(urwid.WidgetWrap):
                     self.view.history.append(self.address.text)
                     return "Jump to "+hex(address)
             elif key == "d" or key == "D":
-                def fillWithNop(yn, arg):
+                def fill_with_nop(yn, arg):
                     if yn == 'y':
-                        if self.da.arch == 'ARM':
-                            self.modifyOpcode("\x00")
+                        if self.disasmblr.arch == 'ARM':
+                            self.modify_opcode("\x00")
                         else:
-                            self.modifyOpcode("\x90")
-                signals.set_prompt_yn.send(self, text="Remove this line?", callback=fillWithNop, arg=None)
+                            self.modify_opcode("\x90")
+                signals.set_prompt_yn.send(self, text="Remove this line?", callback=fill_with_nop, arg=None)
             else:
                 if key == "j" or key == "J":
                     key = "down"
@@ -212,12 +212,12 @@ class SymbolText(urwid.Text):
 class DisassembleList(urwid.WidgetWrap):
     def __init__(self, dList):
         urwid.WidgetWrap.__init__(self, None)
-        self.updateList(dList)
+        self.update_list(dList)
 
     def set_focus(self, idx):
         self._w.set_focus(idx)
 
-    def updateList(self, dList, focus=0):
+    def update_list(self, dList, focus=0):
         self._w = urwid.ListBox(urwid.SimpleListWalker(dList))
         if focus:
             self._w.set_focus(focus)
@@ -258,11 +258,11 @@ class DisassembleView:
     def __init__(self, filename):
         self.header = urwid.Text(" BINCH: %s" % (filename))
 
-        self.da = Disassembler(filename)
+        self.disasmblr = Disassembler(filename)
 
-        items = self.setupList()
+        items = self.setup_list()
         self.disasmlist = DisassembleList(items)
-        start_index = self.findIndex(self.da.entry)
+        start_index = self.find_index(self.disasmblr.entry)
         if start_index != -1:
             self.disasmlist.set_focus(start_index)
 
@@ -279,39 +279,39 @@ class DisassembleView:
 
         signals.call_delay.connect(self.sig_call_delay)
 
-    def findIndex(self, address):
+    def find_index(self, address):
         try:
-            if self.da.isThumb(address):
+            if self.disasmblr.isthumb(address):
                 return self.index_map[address & -2]
             else:
                 return self.index_map[address]
         except KeyError:
             return -1
 
-    def setupList(self):
-        body = self.da.disasm(self.da.text_addr)
+    def setup_list(self):
+        body = self.disasmblr.disasm(self.disasmblr.text_addr)
         items = []
         idx = 0
         self.index_map = dict()
-        for i, isThumb in body:
+        for i, isthumb in body:
             address = i.address
-            if address in self.da.symtab:
+            if address in self.disasmblr.symtab:
                 items.append(SymbolText(" "))
-                items.append(SymbolText(" < "+self.da.symtab[address]+" >"))
+                items.append(SymbolText(" < "+self.disasmblr.symtab[address]+" >"))
                 idx+=2
-            elif (isThumb and (address - 1) in self.da.symtab):
+            elif (isthumb and (address - 1) in self.disasmblr.symtab):
                 items.append(SymbolText(" "))
-                items.append(SymbolText(" < "+self.da.symtab[address - 1]+" >"))
+                items.append(SymbolText(" < "+self.disasmblr.symtab[address - 1]+" >"))
                 idx+=2
-            items.append(DisassembleInstruction((i, isThumb), self.da, self))
+            items.append(DisassembleInstruction((i, isthumb), self.disasmblr, self))
             self.index_map[address] = idx
             idx+=1
 
         return items
 
-    def updateList(self, focus=0):
-        items = self.setupList()
-        self.disasmlist.updateList(items, focus)
+    def update_list(self, focus=0):
+        items = self.setup_list()
+        self.disasmlist.update_list(items, focus)
 
     def update_status(self, *arg):
         signals.redraw_status.send(self)
@@ -355,14 +355,14 @@ class DisassembleView:
                 return "Invalid address: "+hex(address)
 
         if k in ('q', 'Q'):
-            def askQuit(yn, arg):
+            def ask_quit(yn, arg):
                 if yn == 'y':
                     raise urwid.ExitMainLoop()
-            signals.set_prompt_yn.send(self, text="Quit?", callback=askQuit, arg=None)
+            signals.set_prompt_yn.send(self, text="Quit?", callback=ask_quit, arg=None)
         elif k in ('g', 'G'):
             signals.set_prompt.send(self, text="Goto: ", callback=goto)
         elif k in ('s', 'S'):
-            self.da.save()
+            self.disasmblr.save()
         elif k == "esc":
             if len(self.history) > 0:
                 address = int(self.history[-1],16)

@@ -12,7 +12,7 @@ class Disassembler():
         self.filename = filename
         self.loadELF(filename)
 
-    def readMemory(self, address, size):
+    def read_memory(self, address, size):
         for vaddr, foffset, memsize, mem in self.memory:
             if address >= vaddr and address <= vaddr + memsize:
                 if size:
@@ -21,7 +21,7 @@ class Disassembler():
                     return mem[address - vaddr:]
         return ""
 
-    def writeMemory(self, address, data):
+    def write_memory(self, address, data):
         offset = self.addr2offset(address)
         for idx, (vaddr, foffset, memsize, mem) in enumerate(self.memory):
             if offset >= foffset and offset <= foffset + memsize:
@@ -80,7 +80,7 @@ class Disassembler():
             if isinstance(section, SymbolTableSection):
                 for symbol in section.iter_symbols():
                     if symbol['st_info']['type'] == 'STT_FUNC':
-                        if self.isThumb(symbol['st_value']):
+                        if self.isthumb(symbol['st_value']):
                             self.symtab[symbol['st_value'] - 1] = symbol.name
                         else:
                             self.symtab[symbol['st_value']] = symbol.name
@@ -112,21 +112,21 @@ class Disassembler():
             if (address & 1) == 1:
                 thumb = True
             address = address & -2
-            for addr, isThumb in self.thumbtab:
+            for addr, isthumb in self.thumbtab:
                 if address < addr:
                     if thumb:
-                        disasms.extend([(i, True) for i in self.t_md.disasm(self.readMemory(address, addr-address), address)])
+                        disasms.extend([(i, True) for i in self.t_md.disasm(self.read_memory(address, addr-address), address)])
                     else:
-                        disasms.extend([(i, False) for i in self.md.disasm(self.readMemory(address, addr-address), address)])
+                        disasms.extend([(i, False) for i in self.md.disasm(self.read_memory(address, addr-address), address)])
                 address = addr
-                thumb = isThumb
+                thumb = isthumb
             return disasms
         else:
-            return [(i, False) for i in self.md.disasm(self.readMemory(address, size), address)]
+            return [(i, False) for i in self.md.disasm(self.read_memory(address, size), address)]
 
     def save(self):
-        def saveBinary(filename):
-            def saveBinaryYes(yn, filename):
+        def save_binary(filename):
+            def save_binary_yes(yn, filename):
                 if yn == 'y':
                     try:
                         original_binary = open(self.filename, 'rb').read()
@@ -144,18 +144,19 @@ class Disassembler():
                 return "Fail to save binary"
 
             if os.path.exists(filename):
-                return (filename+" already exists, Overwrite?", saveBinaryYes, filename)
+                return (filename+" already exists, Overwrite?", save_binary_yes, filename)
             else:
-                return saveBinaryYes('y', filename)
+                return save_binary_yes('y', filename)
 
-        signals.set_prompt.send(self, text="Save to (filename): ", callback=saveBinary)
+        signals.set_prompt.send(self, text="Save to (filename): ", callback=save_binary)
 
-    def isThumb(self, address):
+    def isthumb(self, address):
         if self.arch == 'ARM' and (address & 1) == 1:
             return True
         else:
             return False
 
+    # Find the architecture of an ARM EFL binary
     def get_tag_cpu_arch(self):
         from struct import unpack
         tag_list = [

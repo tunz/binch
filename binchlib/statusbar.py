@@ -8,8 +8,8 @@ class CommandLine(urwid.WidgetWrap):
         signals.set_prompt.connect(self.sig_prompt)
         signals.set_prompt_yn.connect(self.sig_prompt_yn)
         signals.set_message.connect(self.sig_message)
-        self.promptCallback = False
-        self.promptYNCallback = False
+        self.prompt_callback = False
+        self.prompt_yn_callback = False
 
     def clear(self):
         self._w = urwid.Text("")
@@ -24,44 +24,44 @@ class CommandLine(urwid.WidgetWrap):
             signals.call_delay.send(seconds=expire, callback=cb)
 
     def sig_prompt(self, sender, text, callback):
-        self.promptYNCallback = False
+        self.prompt_yn_callback = False
         signals.focus.send(self, section='footer')
         self._w = urwid.Edit(text, "")
-        self.promptCallback = callback
+        self.prompt_callback = callback
 
     def sig_prompt_yn(self, sender, text, callback, arg):
-        self.promptCallback = False
+        self.prompt_callback = False
         signals.focus.send(self, section='footer')
-        self.askYN(text, callback, arg)
+        self.ask_yn(text, callback, arg)
 
-    def askYN(self, text, callback, arg):
+    def ask_yn(self, text, callback, arg):
         self._w = urwid.Edit(text + " (y/n):", '')
-        self.promptYNCallback = (callback, arg)
+        self.prompt_yn_callback = (callback, arg)
 
     def prompt(self, text):
-        msg = self.promptCallback(text)
-        self.promptCallback = False
+        msg = self.prompt_callback(text)
+        self.prompt_callback = False
         if isinstance(msg, tuple):
             msg, callback, arg = msg
-            self.askYN(msg, callback, arg)
+            self.ask_yn(msg, callback, arg)
         else:
             signals.focus.send(self, section='body')
             if isinstance(msg, str):
                 signals.set_message.send(self, message=msg, expire=1)
 
     def prompt_yn(self, yn):
-        func, arg = self.promptYNCallback
+        func, arg = self.prompt_yn_callback
         msg = func(yn, arg)
         signals.focus.send(self, section='body')
-        self.promptYNCallback = False
+        self.prompt_yn_callback = False
         if msg:
             signals.set_message.send(self, message=msg, expire=1)
         else:
             self.clear()
 
     def prompt_clear(self):
-        self.promptCallback = False
-        self.promptYNCallback = False
+        self.prompt_callback = False
+        self.prompt_yn_callback = False
         signals.focus.send(self, section='body')
         self.clear()
 
@@ -69,7 +69,7 @@ class CommandLine(urwid.WidgetWrap):
         return True
 
     def keypress(self, size, k):
-        if self.promptCallback:
+        if self.prompt_callback:
             if k == "esc":
                 self.prompt_clear()
             elif k == "enter":
@@ -78,7 +78,7 @@ class CommandLine(urwid.WidgetWrap):
                 self._w.keypress(size, k)
             else:
                 return k
-        elif self.promptYNCallback:
+        elif self.prompt_yn_callback:
             if k == "esc":
                 self.prompt_clear()
             elif k == "y" or k == "Y":
@@ -91,7 +91,7 @@ class StatusBar(urwid.WidgetWrap):
         urwid.WidgetWrap.__init__(self, None)
         self.view = view
         self.commandline = CommandLine() 
-        self.defaultText = text
+        self.default_text = text
         self.update_status()
         signals.redraw_status.connect(self.sig_redraw_status)
 
@@ -99,17 +99,17 @@ class StatusBar(urwid.WidgetWrap):
         self.update_status()
 
     def update_status(self):
-        if self.view.da.arch == 'ARM':
-            if self.view.disasmlist._w.focus.isThumb:
+        if self.view.disasmblr.arch == 'ARM':
+            if self.view.disasmlist._w.focus.isthumb:
                 mode = "[Thumb]"
             else:
                 mode = "[ ARM ]"
             self.status = urwid.Columns([
-                urwid.WidgetWrap(urwid.Text(self.defaultText)),
+                urwid.WidgetWrap(urwid.Text(self.default_text)),
                 ('fixed', 20, urwid.WidgetWrap(urwid.Text(mode)))
                 ])
         else:
-            self.status = urwid.WidgetWrap(urwid.Text(self.defaultText))
+            self.status = urwid.WidgetWrap(urwid.Text(self.default_text))
         self.status = urwid.AttrMap(self.status, 'status')
         self._w = urwid.Pile([self.status, self.commandline])
 
