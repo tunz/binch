@@ -1,7 +1,7 @@
 # a light BINary patCH tool
 A light ELF binary patch tool in python urwid. It helps to patch a ELF binary in a few steps.
 
-![capture](./img/screenshot.png)
+![capture](https://cloud.githubusercontent.com/assets/7830853/9346653/9d0fb980-465a-11e5-9908-541ae4c80492.png)
 
 Now, it only supports x86, x86_64, and ARM(experimental).
 
