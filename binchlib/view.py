@@ -22,9 +22,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self.instruction = instr
         self.isthumb = instrSet[1]
         self.address = urwid.Text(hex(instr.address).rstrip('L'))
-        self.opcode = urwid.Text(' '.join(["%02x" % (j) for j in instr.bytes]))
-        self.instr = urwid.Text(instr.mnemonic)
-        self.operands = urwid.Text(instr.op_str)
+        self.opcode = urwid.Text(' '.join(["%02x" % j for j in instr.bytes]))
+        self.instr = urwid.Text("%s%s" % (instr.mnemonic.ljust(8, ' '), instr.op_str))
         self.edit_mode = False
         self.hex_edit_mode = False
         self.disasmblr = disasmblr
@@ -38,8 +37,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self.opcode),
-            ('fixed', 10, self.instr),
-            ('fixed', 55, self.operands)
+            ('fixed', 65, self.instr)
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
@@ -47,7 +45,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self.opcode),
-            ('fixed', 65, self._editbox),
+            ('fixed', 65, self._editbox)
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
@@ -55,8 +53,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self._hexeditbox),
-            ('fixed', 10, self.instr),
-            ('fixed', 55, self.operands)
+            ('fixed', 65, self.instr)
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
@@ -98,17 +95,13 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 code = [i for i in self.disasmblr.t_md.disasm(opcode, len(opcode))][0]
             else:
                 code = [i for i in self.disasmblr.md.disasm(opcode, len(opcode))][0]
-            self.instr.set_text(code.mnemonic)
 
             if (len(code.operands) == 1 and
                 ((self.disasmblr.arch in ['x86','x64'] and code.operands[0].type == X86_OP_IMM) or
                         (self.disasmblr.arch == 'ARM' and code.operands[0].type == ARM_OP_IMM))):
                 self.view.update_list(self.view.disasmlist._w.focus_position)
-            else:
-                self.operands.set_text(code.op_str)
-                self.mode_plain()
 
-            self.operands.set_text(code.op_str)
+            self.instr.set_text("%s%s" % (code.mnemonic.ljust(8, ' ') , code.op_str))
             self.mode_plain()
         else:
             def update_all(yn, arg):
@@ -166,7 +159,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 return key
         else:
             if key == "enter":
-                self._editbox = urwid.Edit("", self.instr.text+" "+self.operands.text)
+                self._editbox = urwid.Edit("", self.instr.text)
                 self.mode_edit1()
                 self.edit_mode = True
             elif key == "h":
@@ -175,14 +168,15 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self.hex_edit_mode = True
             elif key == "f":
                 followAddress = False
-                if self.disasmblr.arch in ['x86', 'x64'] and (self.instr.text[0] == 'j' or self.instr.text == 'call'):
+                mnemonic = self.instruction.mnemonic
+                if self.disasmblr.arch in ['x86', 'x64'] and (mnemonic[0] == 'j' or mnemonic == 'call'):
                     if self.instruction.operands[0].type == X86_OP_IMM:
                         followAddress = True
-                elif self.disasmblr.arch == 'ARM' and self.instr.text[0] == 'b':
+                elif self.disasmblr.arch == 'ARM' and mnemonic[0] == 'b':
                     if self.instruction.operands[0].type == ARM_OP_IMM:
                         followAddress = True
                 if followAddress:
-                    address = int(self.operands.text.lstrip('#'), 16)
+                    address = int(self.instruction.op_str.lstrip('#'), 16)
                     self.view.disasmlist.set_focus(self.view.index_map[address])
                     self.view.history.append(self.address.text)
                     return "Jump to "+hex(address)
@@ -295,13 +289,16 @@ class DisassembleView:
         self.index_map = dict()
         for i, isthumb in body:
             address = i.address
-            if address in self.disasmblr.symtab:
+            symbol = None
+            try: symbol = self.disasmblr.symtab[address]
+            except:
+                if isthumb:
+                    try: symbol = self.disasmblr.symtab[address - 1]
+                    except: pass
+
+            if symbol:
                 items.append(SymbolText(" "))
-                items.append(SymbolText(" < "+self.disasmblr.symtab[address]+" >"))
-                idx+=2
-            elif (isthumb and (address - 1) in self.disasmblr.symtab):
-                items.append(SymbolText(" "))
-                items.append(SymbolText(" < "+self.disasmblr.symtab[address - 1]+" >"))
+                items.append(SymbolText(" < %s >" % symbol))
                 idx+=2
             items.append(DisassembleInstruction((i, isthumb), self.disasmblr, self))
             self.index_map[address] = idx
