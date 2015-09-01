@@ -179,9 +179,14 @@ class DisassembleInstruction(urwid.WidgetWrap):
                         followAddress = True
                 if followAddress:
                     address = int(self.instruction.op_str.lstrip('#'), 16)
-                    self.view.disasmlist.set_focus(self.view.index_map[address])
-                    self.view.history.append(hex(self.instruction.address).rstrip('L'))
-                    return "Jump to "+hex(address)
+                    try:
+                        self.view.disasmlist.set_focus(self.view.index_map[address])
+                        self.view.history.append(hex(self.instruction.address).rstrip('L'))
+                        msg = "Jump to "+hex(address)
+                        signals.set_message.send(0, message=msg, expire=1)
+                    except:
+                        msg = "Error: Fail to jump... please report it"
+                        signals.set_message.send(0, message=msg, expire=2)
             elif key == "d" or key == "D":
                 def fill_with_nop(yn, arg):
                     if yn == 'y':
