@@ -21,9 +21,6 @@ class DisassembleInstruction(urwid.WidgetWrap):
         instr = instrSet[0]
         self.instruction = instr
         self.isthumb = instrSet[1]
-        self.address = urwid.Text(hex(instr.address).rstrip('L'))
-        self.opcode = urwid.Text(' '.join(["%02x" % j for j in instr.bytes]))
-        self.instr = urwid.Text("%s%s" % (instr.mnemonic.ljust(8, ' '), instr.op_str))
         self.edit_mode = False
         self.hex_edit_mode = False
         self.disasmblr = disasmblr
@@ -34,14 +31,17 @@ class DisassembleInstruction(urwid.WidgetWrap):
         return True
 
     def mode_plain(self):
-        self._w = urwid.Columns([
-            ('fixed', 12, self.address),
-            ('fixed', 25, self.opcode),
-            ('fixed', 65, self.instr)
-            ])
+        self._w = urwid.Columns([('fixed', 102, urwid.Text("%s%s%s%s" % (
+                                hex(self.instruction.address).rstrip('L').ljust(14, ' '),
+                                ' '.join(["%02x" % j for j in self.instruction.bytes]).ljust(28, ' '),
+                                self.instruction.mnemonic.ljust(8, ' '),
+                                self.instruction.op_str))
+                                )])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
     def mode_edit1(self):
+        self.address = urwid.Text(hex(self.instruction.address).rstrip('L'))
+        self.opcode = urwid.Text(' '.join(["%02x" % j for j in self.instruction.bytes]))
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self.opcode),
@@ -50,6 +50,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
     def mode_edit2(self):
+        self.address = urwid.Text(hex(self.instruction.address).rstrip('L'))
+        self.instr = urwid.Text("%s%s" % (self.instruction.mnemonic.ljust(8, ' '), self.instruction.op_str))
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 25, self._hexeditbox),
@@ -63,7 +65,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             return
 
         if original_opcode == None:
-            original_opcode = self.opcode.text.replace(' ','').decode('hex')
+            original_opcode = ''.join(map(chr, self.instruction.bytes))
 
         original_opcode_len = len(original_opcode)
 
@@ -74,7 +76,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 opcode = opcode.ljust(original_opcode_len, "\x90") # Fill with nop
         elif len(opcode) > original_opcode_len:
             safe_opcode_len = 0
-            opcode_data = self.disasmblr.read_memory(int(self.address.text, 16), 0x20)
+            opcode_data = self.disasmblr.read_memory(self.instruction.address, 0x20)
             if self.isthumb:
                 disasm_code = self.disasmblr.t_md.disasm(opcode_data, 0x20)
             else:
@@ -87,21 +89,20 @@ class DisassembleInstruction(urwid.WidgetWrap):
             else:
                 opcode = opcode.ljust(safe_opcode_len, "\x90") # Fill with nop
 
-        self.disasmblr.write_memory(int(self.address.text, 16), opcode)
+        self.disasmblr.write_memory(self.instruction.address, opcode)
 
         if original_opcode_len == len(opcode):
-            self.opcode.set_text(' '.join(["%02x" % ord(i) for i in opcode]))
             if self.isthumb:
-                code = [i for i in self.disasmblr.t_md.disasm(opcode, len(opcode))][0]
+                code = [i for i in self.disasmblr.t_md.disasm(opcode, self.instruction.address)][0]
             else:
-                code = [i for i in self.disasmblr.md.disasm(opcode, len(opcode))][0]
+                code = [i for i in self.disasmblr.md.disasm(opcode, self.instruction.address)][0]
 
             if (len(code.operands) == 1 and
                 ((self.disasmblr.arch in ['x86','x64'] and code.operands[0].type == X86_OP_IMM) or
                         (self.disasmblr.arch == 'ARM' and code.operands[0].type == ARM_OP_IMM))):
                 self.view.update_list(self.view.disasmlist._w.focus_position)
 
-            self.instr.set_text("%s%s" % (code.mnemonic.ljust(8, ' ') , code.op_str))
+            self.instruction = code
             self.mode_plain()
         else:
             def update_all(yn, arg):
@@ -111,7 +112,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                     self.modify_opcode(original_opcode)
 
             signals.set_prompt_yn.send(self,
-                    text="This operation will break folloing codes, is it okey?",
+                    text="This operation will break following codes, is it okey?",
                     callback=update_all,
                     arg=None
                     )
@@ -143,7 +144,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             elif key == "enter":
                 self.hex_edit_mode = False
                 hexcode = self._hexeditbox.get_edit_text()
-                original_hexcode = self.opcode.text.replace(' ','').decode('hex')
+                original_hexcode = ''.join(map(chr, self.instruction.bytes))
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
                     self.modify_opcode(opcode, original_hexcode)
@@ -159,11 +160,12 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 return key
         else:
             if key == "enter":
-                self._editbox = urwid.Edit("", self.instr.text)
+                self._editbox = urwid.Edit("", "%s%s" % (self.instruction.mnemonic.ljust(8, ' '),
+                                                                            self.instruction.op_str))
                 self.mode_edit1()
                 self.edit_mode = True
             elif key == "h":
-                self._hexeditbox = urwid.Edit("", self.opcode.text)
+                self._hexeditbox = urwid.Edit("", ' '.join(["%02x" % j for j in self.instruction.bytes]))
                 self.mode_edit2()
                 self.hex_edit_mode = True
             elif key == "f":
@@ -178,7 +180,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 if followAddress:
                     address = int(self.instruction.op_str.lstrip('#'), 16)
                     self.view.disasmlist.set_focus(self.view.index_map[address])
-                    self.view.history.append(self.address.text)
+                    self.view.history.append(hex(self.instruction.address).rstrip('L'))
                     return "Jump to "+hex(address)
             elif key == "d" or key == "D":
                 def fill_with_nop(yn, arg):
