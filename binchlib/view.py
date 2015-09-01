@@ -32,8 +32,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
     def mode_plain(self):
         self._w = urwid.Columns([('fixed', 102, urwid.Text("%s%s%s%s" % (
-                                hex(self.instruction.address).rstrip('L').ljust(14, ' '),
-                                ' '.join(["%02x" % j for j in self.instruction.bytes]).ljust(28, ' '),
+                                hex(self.instruction.address).rstrip('L').ljust(12, ' '),
+                                ' '.join(["%02x" % j for j in self.instruction.bytes]).ljust(27, ' ')+' ',
                                 self.instruction.mnemonic.ljust(8, ' '),
                                 self.instruction.op_str))
                                 )])
@@ -44,8 +44,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self.opcode = urwid.Text(' '.join(["%02x" % j for j in self.instruction.bytes]))
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
-            ('fixed', 25, self.opcode),
-            ('fixed', 65, self._editbox)
+            ('fixed', 28, self.opcode),
+            ('fixed', 62, self._editbox)
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
@@ -54,8 +54,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self.instr = urwid.Text("%s%s" % (self.instruction.mnemonic.ljust(8, ' '), self.instruction.op_str))
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
-            ('fixed', 25, self._hexeditbox),
-            ('fixed', 65, self.instr)
+            ('fixed', 28, self._hexeditbox),
+            ('fixed', 62, self.instr)
             ])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
