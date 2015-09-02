@@ -35,9 +35,9 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
     def mode_plain(self):
         self._w = urwid.Columns([('fixed', 102, urwid.Text("%s%s%s%s" % (
-                                hex(self.instruction.address).rstrip('L').ljust(12, ' '),
+                                hex(self.instruction.address).rstrip('L').ljust(11, ' ')+' ',
                                 ' '.join(["%02x" % j for j in self.instruction.bytes]).ljust(27, ' ')+' ',
-                                self.instruction.mnemonic.ljust(8, ' '),
+                                self.instruction.mnemonic.ljust(7, ' ')+' ',
                                 self.instruction.op_str))
                                 )])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
