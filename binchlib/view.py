@@ -6,6 +6,8 @@ from capstone.x86 import X86_OP_IMM
 from capstone.arm import ARM_OP_IMM
 import signals
 import traceback
+import progressbar
+import sys
 
 class DisassembleText(urwid.Text):
 
@@ -294,7 +296,8 @@ class DisassembleView:
         items = []
         idx = 0
         self.index_map = dict()
-        for i, isthumb in body:
+        for i,isthumb in progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+                                            progressbar.Bar(), ' ', progressbar.ETA()])(body):
             address = i.address
             symbol = None
             try: symbol = self.disasmblr.symtab[address]
@@ -310,6 +313,7 @@ class DisassembleView:
             items.append(DisassembleInstruction((i, isthumb), self.disasmblr, self))
             self.index_map[address] = idx
             idx+=1
+        sys.stdout.write("\033[F")
 
         return items
 

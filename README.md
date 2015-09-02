@@ -22,15 +22,9 @@ h: Modify hex bytes of a current line.
 f: follow the address of jmp or call instructions.
 ```
 
-## Dependencies
-```
-# pip install pyelftools
-# pip install capstone
-# pip install urwid
-# pip install blinker
-```
+## Prerequisite
 
-For llvm-mc (Ubuntu)
+Install llvm-mc (Ubuntu)
 ```
 # apt-get install llvm
 ```

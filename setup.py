@@ -4,12 +4,13 @@ py_modules = [
 'pyelftools',
 'capstone',
 'urwid',
-'blinker'
+'blinker',
+'progressbar'
 ]
 
 setup (
         name = 'binch',
-        version = '0.2.11',
+        version = '0.2.12',
         description = 'a light ELF binary patch tool',
         author = 'Choongwoo Han',
         author_email = 'cwhan.tunz@gmail.com',
