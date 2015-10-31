@@ -5,7 +5,7 @@ py_modules = [
 'capstone',
 'urwid',
 'blinker',
-'progressbar'
+'progressbar2'
 ]
 
 setup (

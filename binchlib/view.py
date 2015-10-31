@@ -8,6 +8,7 @@ import signals
 import traceback
 import progressbar
 import sys
+import re
 
 class DisassembleText(urwid.Text):
 
@@ -34,9 +35,9 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
     def mode_plain(self):
         self._w = urwid.Columns([('fixed', 102, urwid.Text("%s%s%s%s" % (
-                                hex(self.instruction.address).rstrip('L').ljust(12, ' '),
+                                hex(self.instruction.address).rstrip('L').ljust(11, ' ')+' ',
                                 ' '.join(["%02x" % j for j in self.instruction.bytes]).ljust(27, ' ')+' ',
-                                self.instruction.mnemonic.ljust(8, ' '),
+                                self.instruction.mnemonic.ljust(7, ' ')+' ',
                                 self.instruction.op_str))
                                 )])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
@@ -183,7 +184,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                     address = int(self.instruction.op_str.lstrip('#'), 16)
                     try:
                         self.view.disasmlist.set_focus(self.view.index_map[address])
-                        self.view.history.append(hex(self.instruction.address).rstrip('L'))
+                        self.view.history.append(self.instruction.address)
                         msg = "Jump to "+hex(address)
                         signals.set_message.send(0, message=msg, expire=1)
                     except:
@@ -341,22 +342,25 @@ class DisassembleView:
     def unhandled_input(self, k):
         def goto(text):
             try:
-                address = int(text, 16)
+                if bool(re.match(r'^([0-9]|0x[0-9a-fA-F]+|\+|\-| )+$',text)):
+                    address = eval(text)
+                else:
+                    return "It is invalid number: "+text
             except:
-                return "It is not hexadecimal number: "+text
+                return "Fail to calculate address: "+text
 
             if address in self.index_map:
-                self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].address.text)
+                self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].instruction.address)
                 self.disasmlist.set_focus(self.index_map[address])
                 return "Jump to "+hex(address)
             else:
                 for i in range(1, 0x10):
                     if address - i in self.index_map:
-                        self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].address.text)
+                        self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].instruction.address)
                         self.disasmlist.set_focus(self.index_map[address - i])
                         return "Jump to "+hex(address - i)
                     elif address + i in self.index_map:
-                        self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].address.text)
+                        self.history.append(self.disasmlist._w.body[self.disasmlist._w.focus_position].instruction.address)
                         self.disasmlist.set_focus(self.index_map[address + i])
                         return "Jump to "+hex(address + i)
 
@@ -373,7 +377,7 @@ class DisassembleView:
             self.disasmblr.save()
         elif k == "esc":
             if len(self.history) > 0:
-                address = int(self.history[-1],16)
+                address = self.history[-1]
                 del self.history[-1]
                 self.disasmlist.set_focus(self.index_map[address])
 
