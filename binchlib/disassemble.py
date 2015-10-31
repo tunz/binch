@@ -143,6 +143,9 @@ class Disassembler():
 
                 return "Fail to save binary"
 
+            if filename == "":
+                filename = self.filename
+
             if os.path.exists(filename):
                 return (filename+" already exists, Overwrite?", save_binary_yes, filename)
             else:
