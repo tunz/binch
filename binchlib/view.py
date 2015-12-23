@@ -23,7 +23,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         urwid.WidgetWrap.__init__(self, None)
         instr = instrSet[0]
         self.instruction = instr
-        self.isthumb = instrSet[1]
+        self.hexcode = instrSet[1]
+        self.isthumb = instrSet[2]
         self.edit_mode = False
         self.hex_edit_mode = False
         self.disasmblr = disasmblr
@@ -36,7 +37,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
     def mode_plain(self):
         self._w = urwid.Columns([('fixed', 102, urwid.Text("%s%s%s%s" % (
                                 hex(self.instruction.address).rstrip('L').ljust(11, ' ')+' ',
-                                ' '.join(["%02x" % j for j in self.instruction.bytes]).ljust(27, ' ')+' ',
+                                ' '.join(["%02x" % j for j in self.hexcode]).ljust(27, ' ')+' ',
                                 self.instruction.mnemonic.ljust(7, ' ')+' ',
                                 self.instruction.op_str))
                                 )])
@@ -44,7 +45,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
     def mode_edit1(self):
         self.address = urwid.Text(hex(self.instruction.address).rstrip('L'))
-        self.opcode = urwid.Text(' '.join(["%02x" % j for j in self.instruction.bytes]))
+        self.opcode = urwid.Text(' '.join(["%02x" % j for j in self.hexcode]))
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 28, self.opcode),
@@ -68,7 +69,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             return
 
         if original_opcode == None:
-            original_opcode = ''.join(map(chr, self.instruction.bytes))
+            original_opcode = ''.join(map(chr, self.hexcode))
 
         original_opcode_len = len(original_opcode)
 
@@ -106,6 +107,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self.view.update_list(self.view.disasmlist._w.focus_position)
 
             self.instruction = code
+            self.hexcode = map(ord, opcode)
             self.mode_plain()
         else:
             def update_all(yn, arg):
@@ -311,7 +313,8 @@ class DisassembleView:
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < %s >" % symbol))
                 idx+=2
-            items.append(DisassembleInstruction((i, isthumb), self.disasmblr, self))
+            hexcode = i.bytes
+            items.append(DisassembleInstruction((i, hexcode, isthumb), self.disasmblr, self))
             self.index_map[address] = idx
             idx+=1
         sys.stdout.write("\033[F")
