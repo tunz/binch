@@ -23,29 +23,33 @@ class DisassembleInstruction(urwid.WidgetWrap):
         urwid.WidgetWrap.__init__(self, None)
         instr = instrSet[0]
         self.instruction = instr
-        self.hexcode = instrSet[1]
-        self.isthumb = instrSet[2]
+        self.hexcode = list(self.instruction.bytes)
+        self.isthumb = instrSet[1]
         self.edit_mode = False
         self.hex_edit_mode = False
         self.disasmblr = disasmblr
         self.view = view
+        self.repeat = 1
         self.mode_plain()
 
     def selectable(self):
         return True
 
     def mode_plain(self):
+        repeat_str = ""
+        if self.repeat > 1:
+            repeat_str = " .. (repeat %d times)" % self.repeat
         self._w = urwid.Columns([('fixed', 102, urwid.Text("%s%s%s%s" % (
                                 hex(self.instruction.address).rstrip('L').ljust(11, ' ')+' ',
-                                ' '.join(["%02x" % j for j in self.hexcode]).ljust(27, ' ')+' ',
+                                ' '.join(["%02x" % j for j in self.hexcode*self.repeat]).ljust(27, ' ')+' ',
                                 self.instruction.mnemonic.ljust(7, ' ')+' ',
-                                self.instruction.op_str))
+                                self.instruction.op_str + repeat_str))
                                 )])
         self._w = urwid.AttrMap(self._w, 'bg', 'reveal focus')
 
     def mode_edit1(self):
         self.address = urwid.Text(hex(self.instruction.address).rstrip('L'))
-        self.opcode = urwid.Text(' '.join(["%02x" % j for j in self.hexcode]))
+        self.opcode = urwid.Text(' '.join(["%02x" % j for j in self.hexcode*self.repeat]))
         self._w = urwid.Columns([
             ('fixed', 12, self.address),
             ('fixed', 28, self.opcode),
@@ -69,7 +73,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             return
 
         if original_opcode == None:
-            original_opcode = ''.join(map(chr, self.hexcode))
+            original_opcode = ''.join(map(chr, self.hexcode*self.repeat))
 
         original_opcode_len = len(original_opcode)
 
@@ -95,11 +99,33 @@ class DisassembleInstruction(urwid.WidgetWrap):
 
         self.disasmblr.write_memory(self.instruction.address, opcode)
 
-        if original_opcode_len == len(opcode):
-            if self.isthumb:
-                code = [i for i in self.disasmblr.t_md.disasm(opcode, self.instruction.address)][0]
-            else:
-                code = [i for i in self.disasmblr.md.disasm(opcode, self.instruction.address)][0]
+        repeat = 0
+
+        if self.isthumb:
+            codes = [i for i in self.disasmblr.t_md.disasm(opcode, self.instruction.address)]
+        else:
+            codes = [i for i in self.disasmblr.md.disasm(opcode, self.instruction.address)]
+
+        if self.disasmblr.arch in ['x86','x64']:
+            NOPCODE = [0x90]
+        elif self.disasmblr.arch == 'ARM':
+            NOPCODE = [0x00, 0x00]
+
+        nopcode_repeat = True
+        for c in codes:
+            repeat += 1
+            if list(c.bytes) != NOPCODE:
+                nopcode_repeat = False
+                break
+
+        if nopcode_repeat:
+            codes = codes[:1]
+            self.repeat = repeat
+        else:
+            self.repeat = 1
+
+        if original_opcode_len == len(opcode) and len(codes) == 1:
+            code = codes[0]
 
             if (len(code.operands) == 1 and
                 ((self.disasmblr.arch in ['x86','x64'] and code.operands[0].type == X86_OP_IMM) or
@@ -107,7 +133,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 self.view.update_list(self.view.disasmlist._w.focus_position)
 
             self.instruction = code
-            self.hexcode = map(ord, opcode)
+            self.hexcode = list(self.instruction.bytes)
             self.mode_plain()
         else:
             def update_all(yn, arg):
@@ -121,6 +147,10 @@ class DisassembleInstruction(urwid.WidgetWrap):
                     callback=update_all,
                     arg=None
                     )
+
+    def repeat_inc(self):
+        self.repeat += 1
+        self.mode_plain()
 
     def keypress(self, size, key):
         if self.edit_mode:
@@ -149,7 +179,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
             elif key == "enter":
                 self.hex_edit_mode = False
                 hexcode = self._hexeditbox.get_edit_text()
-                original_hexcode = ''.join(map(chr, self.instruction.bytes))
+                original_hexcode = ''.join(map(chr, self.hexcode*self.repeat))
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
                     self.modify_opcode(opcode, original_hexcode)
@@ -266,7 +296,7 @@ class DisassembleView:
 
         self.disasmblr = Disassembler(filename)
 
-        items = self.setup_list()
+        items = self.setup_list(True)
         self.disasmlist = DisassembleList(items)
         start_index = self.find_index(self.disasmblr.entry)
         if start_index != -1:
@@ -294,13 +324,24 @@ class DisassembleView:
         except KeyError:
             return -1
 
-    def setup_list(self):
+    def setup_list(self, show_progressbar = False):
+        if self.disasmblr.arch in ['x86','x64']:
+            NOPCODE = [0x90]
+        elif self.disasmblr.arch == 'ARM':
+            NOPCODE = [0x00, 0x00]
+
         body = self.disasmblr.disasm(self.disasmblr.text_addr)
         items = []
         idx = 0
         self.index_map = dict()
-        for i,isthumb in progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
-                                            progressbar.Bar(), ' ', progressbar.ETA()])(body):
+
+        if show_progressbar:
+            instr_list = progressbar.ProgressBar(widgets=[progressbar.Percentage(), ' ',
+                                                    progressbar.Bar(), ' ', progressbar.ETA()])(body)
+        else:
+            instr_list = body
+
+        for i,isthumb in instr_list:
             address = i.address
             symbol = None
             try: symbol = self.disasmblr.symtab[address]
@@ -313,10 +354,13 @@ class DisassembleView:
                 items.append(SymbolText(" "))
                 items.append(SymbolText(" < %s >" % symbol))
                 idx+=2
-            hexcode = i.bytes
-            items.append(DisassembleInstruction((i, hexcode, isthumb), self.disasmblr, self))
-            self.index_map[address] = idx
-            idx+=1
+            hexcode = list(i.bytes)
+            if hexcode == NOPCODE and (isinstance(items[-1], DisassembleInstruction) and items[-1].hexcode == NOPCODE):
+                items[-1].repeat_inc()
+            else:
+                items.append(DisassembleInstruction((i, isthumb), self.disasmblr, self))
+                self.index_map[address] = idx
+                idx+=1
         sys.stdout.write("\033[F")
 
         return items
