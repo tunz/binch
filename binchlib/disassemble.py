@@ -44,8 +44,7 @@ class Disassembler():
         try:
             self.elf = ELFFile(file(sys.argv[1]))
         except:
-            print "[-] It is not ELF file: "+sys.argv[1]
-            sys.exit()
+            raise Exception("[-] This file is not an ELF file: %s" % sys.argv[1])
 
         self.arch = self.elf.get_machine_arch()
 
