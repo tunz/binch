@@ -19,12 +19,11 @@ class DisassembleText(urwid.Text):
         return key
 
 class DisassembleInstruction(urwid.WidgetWrap):
-    def __init__(self, instrSet, disasmblr, view):
+    def __init__(self, instr, disasmblr, view):
         urwid.WidgetWrap.__init__(self, None)
-        instr = instrSet[0]
         self.instruction = instr
         self.hexcode = list(self.instruction.bytes)
-        self.isthumb = instrSet[1]
+        self.isthumb = disasmblr.is_thumb_instr(instr)
         self.edit_mode = False
         self.hex_edit_mode = False
         self.disasmblr = disasmblr
@@ -317,7 +316,7 @@ class DisassembleView:
 
     def find_index(self, address):
         try:
-            if self.disasmblr.isthumb(address):
+            if self.disasmblr.is_thumb_addr(address):
                 return self.index_map[address & -2]
             else:
                 return self.index_map[address]
@@ -341,12 +340,12 @@ class DisassembleView:
         else:
             instr_list = body
 
-        for i,isthumb in instr_list:
+        for i in instr_list:
             address = i.address
             symbol = None
             try: symbol = self.disasmblr.symtab[address]
             except:
-                if isthumb:
+                if self.disasmblr.is_thumb_instr(i):
                     try: symbol = self.disasmblr.symtab[address - 1]
                     except: pass
 
@@ -358,7 +357,7 @@ class DisassembleView:
             if hexcode == NOPCODE and (isinstance(items[-1], DisassembleInstruction) and items[-1].hexcode == NOPCODE):
                 items[-1].repeat_inc()
             else:
-                items.append(DisassembleInstruction((i, isthumb), self.disasmblr, self))
+                items.append(DisassembleInstruction(i, self.disasmblr, self))
                 self.index_map[address] = idx
                 idx+=1
         sys.stdout.write("\033[F")

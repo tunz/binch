@@ -79,7 +79,7 @@ class Disassembler():
             if isinstance(section, SymbolTableSection):
                 for symbol in section.iter_symbols():
                     if symbol['st_info']['type'] == 'STT_FUNC':
-                        if self.isthumb(symbol['st_value']):
+                        if self.is_thumb_addr(symbol['st_value']):
                             self.symtab[symbol['st_value'] - 1] = symbol.name
                         else:
                             self.symtab[symbol['st_value']] = symbol.name
@@ -114,14 +114,17 @@ class Disassembler():
             for addr, isthumb in self.thumbtab:
                 if address < addr:
                     if thumb:
-                        disasms.extend([(i, True) for i in self.t_md.disasm(self.read_memory(address, addr-address), address)])
+                        disasms.extend([i for i in self.t_md.disasm(self.read_memory(address, addr-address), address)])
                     else:
-                        disasms.extend([(i, False) for i in self.md.disasm(self.read_memory(address, addr-address), address)])
+                        disasms.extend([i for i in self.md.disasm(self.read_memory(address, addr-address), address)])
                 address = addr
                 thumb = isthumb
             return disasms
         else:
-            return [(i, False) for i in self.md.disasm(self.read_memory(address, size), address)]
+            return [i for i in self.md.disasm(self.read_memory(address, size), address)]
+
+    def is_thumb_instr(self, instr):
+        return instr._cs.mode == CS_MODE_THUMB
 
     def save(self):
         def save_binary(filename):
@@ -152,7 +155,7 @@ class Disassembler():
 
         signals.set_prompt.send(self, text="Save to (filename): ", callback=save_binary)
 
-    def isthumb(self, address):
+    def is_thumb_addr(self, address):
         if self.arch == 'ARM' and (address & 1) == 1:
             return True
         else:
