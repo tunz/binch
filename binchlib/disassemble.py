@@ -75,9 +75,7 @@ class Disassembler():
         self.symtab = dict()
         self.thumbtab = list()
 
-        self.code = []
-        self.code_addr = None
-        self.code_size = 0
+        self.code_addrs = []
 
         for section in self.elf.iter_sections():
             if isinstance(section, SymbolTableSection):
@@ -94,17 +92,13 @@ class Disassembler():
                         elif symbol.name == '$a':   #ARM
                             self.thumbtab.append((symbol['st_value'], False))
             else:
-                # Assumption: 1) Code section's flag is AX (ALLOC=2, EXEC=4)
-                # 2) Code sections are consecutive
+                # Assumption: Code section's flag is AX (ALLOC=2, EXEC=4)
                 if section['sh_flags'] == 6:
-                    self.code.append(section.data())
-                    if not self.code_addr:
-                        self.code_addr = section['sh_addr']
-                    self.code_size += section['sh_size']
+                    self.code_addrs.append({'address': section['sh_addr'], 'size': section['sh_size']})
 
         self.thumbtab.sort(key=lambda tup: tup[0])
 
-        self.code = ''.join(self.code)
+        self.code_addrs = sorted(self.code_addrs, key=lambda k: k['address'])
 
         arch = {'x86':CS_ARCH_X86,'x64':CS_ARCH_X86, 'ARM':CS_ARCH_ARM}[self.arch]
         mode = {'x86':CS_MODE_32, 'x64':CS_MODE_64, 'ARM':CS_MODE_ARM}[self.arch]
