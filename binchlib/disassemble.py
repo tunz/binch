@@ -44,7 +44,7 @@ class Disassembler():
         try:
             self.elf = ELFFile(file(filename))
         except:
-            raise Exception("[-] This file is not an ELF file: %s" % sys.argv[1])
+            raise Exception("[-] This file is not an ELF file: %s" % filename)
 
         self.arch = self.elf.get_machine_arch()
 
@@ -65,7 +65,7 @@ class Disassembler():
             vaddr = elf_segment.header.p_vaddr - ELF_PAGEOFFSET
             memsz = (memsz + align ) & ~(align-1)
 
-            with open(sys.argv[1], 'rb') as f:
+            with open(filename, 'rb') as f:
                 f.seek(offset, 0)
                 data = f.read(filesz)
                 self.memory.append((vaddr, offset, memsz, data))
