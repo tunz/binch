@@ -72,11 +72,16 @@ class Disassembler():
 
         self.entry = self.elf.header.e_entry
 
-        # Load symbol table
         self.symtab = dict()
         self.thumbtab = list()
+
+        self.code = []
+        self.code_addr = None
+        self.code_size = 0
+
         for section in self.elf.iter_sections():
             if isinstance(section, SymbolTableSection):
+                # Load symbol table
                 for symbol in section.iter_symbols():
                     if symbol['st_info']['type'] == 'STT_FUNC':
                         if self.is_thumb_addr(symbol['st_value']):
@@ -88,13 +93,18 @@ class Disassembler():
                             self.thumbtab.append((symbol['st_value'], True))
                         elif symbol.name == '$a':   #ARM
                             self.thumbtab.append((symbol['st_value'], False))
+            else:
+                # Assumption: 1) Code section's flag is AX (ALLOC=2, EXEC=4)
+                # 2) Code sections are consecutive
+                if section['sh_flags'] == 6:
+                    self.code.append(section.data())
+                    if not self.code_addr:
+                        self.code_addr = section['sh_addr']
+                    self.code_size += section['sh_size']
 
         self.thumbtab.sort(key=lambda tup: tup[0])
 
-        text_section = self.elf.get_section_by_name('.text')
-        self.text = text_section.data()
-        self.text_addr = text_section['sh_addr']
-        self.text_size = text_section['sh_size']
+        self.code = ''.join(self.code)
 
         arch = {'x86':CS_ARCH_X86,'x64':CS_ARCH_X86, 'ARM':CS_ARCH_ARM}[self.arch]
         mode = {'x86':CS_MODE_32, 'x64':CS_MODE_64, 'ARM':CS_MODE_ARM}[self.arch]

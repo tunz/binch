@@ -329,7 +329,7 @@ class DisassembleView:
         elif self.disasmblr.arch == 'ARM':
             NOPCODE = [0x00, 0x00]
 
-        body = self.disasmblr.disasm(self.disasmblr.text_addr)
+        body = self.disasmblr.disasm(self.disasmblr.code_addr)
         items = []
         idx = 0
         self.index_map = dict()
