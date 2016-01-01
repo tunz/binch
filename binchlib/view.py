@@ -330,7 +330,7 @@ class DisassembleView:
             NOPCODE = [0x00, 0x00]
 
         body = []
-        for code in sorted(self.disasmblr.code_addrs):
+        for code in self.disasmblr.code_addrs:
             body.extend(self.disasmblr.disasm(code['address'], code['size']))
 
         items = []
