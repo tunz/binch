@@ -42,7 +42,7 @@ class Disassembler():
 
     def loadELF(self, filename):
         try:
-            self.elf = ELFFile(file(sys.argv[1]))
+            self.elf = ELFFile(file(filename))
         except:
             raise Exception("[-] This file is not an ELF file: %s" % sys.argv[1])
 
