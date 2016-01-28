@@ -12,7 +12,11 @@ def assemble(code, arch, arm_arch=None):
     if cmd_exists("llvm-mc"):
 
         asm_fd = open('.asm', 'w')
-        asm_fd.write(code)
+        if arch in ['x86', 'x64']:
+            # Padding for memory reference using rip (e.g. cmp [rip + x], 0)
+            asm_fd.write("pop ebp\n"+code)
+        else:
+            asm_fd.write(code)
         asm_fd.close()
 
         llvm_arch = {'x86':'x86','x64':'x86-64','ARM':'arm','thumb':'thumb'}[arch]
@@ -46,6 +50,8 @@ def assemble(code, arch, arm_arch=None):
         s = re.search("encoding: \[(.*)\]",data)
         if s:
             opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
+            if arch in ['x86', 'x64']:
+                opcode = opcode[1:]
         else:
             msg = "Error: No assembled code"
             signals.set_message.send(0, message=msg, expire=2)
