@@ -47,11 +47,11 @@ def assemble(code, arch, arm_arch=None):
             return ""
 
         data = open('.opcode','r').read()
+        if arch in ['x86', 'x64']:
+            data = data[data.find('encoding')+1:]
         s = re.search("encoding: \[(.*)\]",data)
         if s:
             opcode = ''.join([chr(int(i,16)) for i in s.group(1).split(',')])
-            if arch in ['x86', 'x64']:
-                opcode = opcode[1:]
         else:
             msg = "Error: No assembled code"
             signals.set_message.send(0, message=msg, expire=2)
