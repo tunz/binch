@@ -2,7 +2,7 @@ from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 import sys, os
-import signals
+from . import signals
 
 class Disassembler():
 
@@ -63,10 +63,10 @@ class Disassembler():
         return memory
 
     def loadELF(self, filename):
-        try:
-            self.elf = ELFFile(file(filename))
-        except:
-            raise Exception("[-] This file is not an ELF file: %s" % filename)
+        #try:
+        self.elf = ELFFile(open(filename, 'rb'))
+        #except:
+        #    raise Exception("[-] This file is not an ELF file: %s" % filename)
 
         self.arch = self.elf.get_machine_arch()
 
@@ -148,9 +148,9 @@ class Disassembler():
                             f.seek(foffset, 0)
                             f.write(mem)
                         f.close()
-                        os.chmod(filename, 0755)
+                        os.chmod(filename, 0o755)
                         return "Successfully save to '%s'" % filename
-                    except Exception, e:
+                    except Exception as e:
                         return "Fail to save binary: "+str(e)
 
                 return "Fail to save binary"

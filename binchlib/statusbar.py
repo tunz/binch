@@ -1,5 +1,5 @@
+from . import signals
 import urwid
-import signals
 
 class CommandLine(urwid.WidgetWrap):
     def __init__(self):

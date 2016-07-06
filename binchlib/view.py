@@ -1,10 +1,10 @@
 import urwid
-from disassemble import *
-from assembler import *
-from statusbar import *
+from .disassemble import *
+from .assembler import *
+from .statusbar import *
+from . import signals
 from capstone.x86 import X86_OP_IMM
 from capstone.arm import ARM_OP_IMM
-import signals
 import traceback
 import progressbar
 import sys
@@ -182,7 +182,7 @@ class DisassembleInstruction(urwid.WidgetWrap):
                 try:
                     opcode = hexcode.replace(' ','').decode('hex')
                     self.modify_opcode(opcode, original_hexcode)
-                except Exception, e:
+                except Exception as e:
                     msg = "Error: "+str(e)
                     self.modify_opcode(original_hexcode, original_hexcode)
                     signals.set_message.send(0, message=msg, expire=2)
@@ -386,7 +386,7 @@ class DisassembleView:
             self.loop.run()
         except:
             self.loop.stop()
-            print traceback.format_exc()
+            print(traceback.format_exc())
 
     def unhandled_input(self, k):
         def goto(text):

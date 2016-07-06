@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from view import DisassembleView
+from .view import DisassembleView
 import argparse
 import sys
 import os
@@ -16,4 +16,4 @@ def binch(args=None):
     if os.path.isfile(filepath):
         DisassembleView(filepath).main()
     else:
-        print "[-] There is no file: %s" % (filepath)
+        print("[-] There is no file: %s" % (filepath))

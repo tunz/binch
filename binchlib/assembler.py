@@ -1,7 +1,7 @@
 
 import os
 from subprocess import Popen, PIPE, call
-import signals
+from . import signals
 import re
 
 def cmd_exists(cmd):
