@@ -11,6 +11,7 @@ class Disassembler():
     def __init__(self, filename):
         self.filename = filename
         self.loadELF(filename)
+        self.init_disasmblr()
 
     def read_memory(self, address, size):
         for vaddr, foffset, memsize, mem in self.memory:
@@ -40,19 +41,9 @@ class Disassembler():
                 return address - vaddr + foffset
         return -1
 
-    def loadELF(self, filename):
-        try:
-            self.elf = ELFFile(file(filename))
-        except:
-            raise Exception("[-] This file is not an ELF file: %s" % filename)
-
-        self.arch = self.elf.get_machine_arch()
-
-        if self.arch == 'ARM':
-            self.arm_arch = self.get_tag_cpu_arch()
-
-        # Load code segments
-        for elf_segment in self.elf.iter_segments():
+    def load_code_segments(self, segments, filename):
+        memory = []
+        for elf_segment in segments:
             if elf_segment.header.p_type != 'PT_LOAD':
                 continue
 
@@ -68,7 +59,21 @@ class Disassembler():
             with open(filename, 'rb') as f:
                 f.seek(offset, 0)
                 data = f.read(filesz)
-                self.memory.append((vaddr, offset, memsz, data))
+                memory.append((vaddr, offset, memsz, data))
+        return memory
+
+    def loadELF(self, filename):
+        try:
+            self.elf = ELFFile(file(filename))
+        except:
+            raise Exception("[-] This file is not an ELF file: %s" % filename)
+
+        self.arch = self.elf.get_machine_arch()
+
+        if self.arch == 'ARM':
+            self.arm_arch = self.get_tag_cpu_arch()
+
+        self.memory = self.load_code_segments(self.elf.iter_segments(), filename)
 
         self.entry = self.elf.header.e_entry
 
@@ -100,6 +105,7 @@ class Disassembler():
 
         self.code_addrs = sorted(self.code_addrs, key=lambda k: k['address'])
 
+    def init_disasmblr(self):
         arch = {'x86':CS_ARCH_X86,'x64':CS_ARCH_X86, 'ARM':CS_ARCH_ARM}[self.arch]
         mode = {'x86':CS_MODE_32, 'x64':CS_MODE_64, 'ARM':CS_MODE_ARM}[self.arch]
         self.md = Cs(arch, mode)
