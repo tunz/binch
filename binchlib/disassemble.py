@@ -64,25 +64,26 @@ class Disassembler():
 
     def loadELF(self, filename):
         try:
-            self.elf = ELFFile(open(filename, 'rb'))
+            elf = ELFFile(open(filename, 'rb'))
         except:
             raise Exception("[-] This file is not an ELF file: %s" % filename)
 
-        self.arch = self.elf.get_machine_arch()
+        self.arch = elf.get_machine_arch()
 
         if self.arch == 'ARM':
-            self.arm_arch = self.get_tag_cpu_arch()
+            arm_attr = elf.get_section_by_name('.ARM.attributes')
+            self.arm_arch = self.get_tag_cpu_arch(arm_attr)
 
-        self.memory = self.load_code_segments(self.elf.iter_segments(), filename)
+        self.memory = self.load_code_segments(elf.iter_segments(), filename)
 
-        self.entry = self.elf.header.e_entry
+        self.entry = elf.header.e_entry
 
         self.symtab = dict()
         self.thumbtab = list()
 
         self.code_addrs = []
 
-        for section in self.elf.iter_sections():
+        for section in elf.iter_sections():
             if isinstance(section, SymbolTableSection):
                 # Load symbol table
                 for symbol in section.iter_symbols():
@@ -172,7 +173,7 @@ class Disassembler():
             return False
 
     # Find the architecture of an ARM EFL binary
-    def get_tag_cpu_arch(self):
+    def get_tag_cpu_arch(self, attr):
         from struct import unpack
         tag_list = [
                 'Pre_v4',
@@ -192,7 +193,6 @@ class Disassembler():
                 'v8'        # v8,v8.1a AArch32
                 ]
 
-        attr = self.elf.get_section_by_name('.ARM.attributes')
         attr_data = attr.data()
 
         if attr_data[0] != 'A':
