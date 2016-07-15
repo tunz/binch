@@ -172,7 +172,7 @@ class Disassembler():
         else:
             return False
 
-    # Find the architecture of an ARM EFL binary
+    # Find the architecture of an ARM ELF binary
     def get_tag_cpu_arch(self, attr):
         from struct import unpack
         tag_list = [
