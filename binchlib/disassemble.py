@@ -63,10 +63,10 @@ class Disassembler():
         return memory
 
     def loadELF(self, filename):
-        #try:
-        self.elf = ELFFile(open(filename, 'rb'))
-        #except:
-        #    raise Exception("[-] This file is not an ELF file: %s" % filename)
+        try:
+            self.elf = ELFFile(open(filename, 'rb'))
+        except:
+            raise Exception("[-] This file is not an ELF file: %s" % filename)
 
         self.arch = self.elf.get_machine_arch()
 
