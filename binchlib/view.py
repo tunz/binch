@@ -1,6 +1,5 @@
 import urwid
 from .disassemble import *
-from .assembler import *
 from .statusbar import *
 from . import signals
 from capstone.x86 import X86_OP_IMM
@@ -24,6 +23,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         self.instruction = instr
         self.hexcode = list(self.instruction.bytes)
         self.isthumb = disasmblr.is_thumb_instr(instr)
+        self._editbox = None
+        self._hexeditbox = None
         self.edit_mode = False
         self.hex_edit_mode = False
         self.disasmblr = disasmblr
@@ -84,10 +85,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
         elif len(opcode) > original_opcode_len:
             safe_opcode_len = 0
             opcode_data = self.disasmblr.read_memory(self.instruction.address, 0x20)
-            if self.isthumb:
-                disasm_code = self.disasmblr.t_md.disasm(opcode_data, 0x20)
-            else:
-                disasm_code = self.disasmblr.md.disasm(opcode_data, 0x20)
+            md = self.disasmblr.md if not self.isthumb else self.disasmblr.t_md
+            disasm_code = md.disasm(opcode_data, 0x20)
             for i in disasm_code:
                 if len(opcode) > safe_opcode_len:
                     safe_opcode_len += len(i.bytes)
@@ -159,13 +158,8 @@ class DisassembleInstruction(urwid.WidgetWrap):
             elif key == "enter":
                 self.edit_mode = False
                 asmcode = self._editbox.get_edit_text()
-                if self.disasmblr.arch == 'ARM':
-                    if self.isthumb:
-                        opcode = assemble(asmcode, 'thumb', self.disasmblr.arm_arch)
-                    else:
-                        opcode = assemble(asmcode, self.disasmblr.arch, self.disasmblr.arm_arch)
-                else:
-                    opcode = assemble(asmcode, self.disasmblr.arch)
+                is_thumb_code = True if self.disasmblr.arch == 'ARM' and self.isthumb else False
+                opcode = self.disasmblr.asm(asmcode, thumb=is_thumb_code)
                 self.modify_opcode(opcode)
             elif isinstance(key, basestring):
                 self._w.keypress(size, key)

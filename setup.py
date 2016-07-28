@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 py_modules = [
 'pyelftools',
 'capstone',
+'keystone-engine',
 'urwid',
 'blinker',
 'progressbar2'

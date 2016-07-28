@@ -1,4 +1,5 @@
 from capstone import *
+from keystone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 import sys, os
@@ -12,6 +13,7 @@ class Disassembler():
         self.filename = filename
         self.loadELF(filename)
         self.init_disasmblr()
+        self.init_asmblr()
 
     def read_memory(self, address, size):
         for vaddr, foffset, memsize, mem in self.memory:
@@ -99,16 +101,19 @@ class Disassembler():
             raise Exception("[-] This file is not an ELF file: %s" % filename)
 
         self.arch = elf.get_machine_arch()
-        if self.arch == 'ARM':
-            arm_attr = elf.get_section_by_name('.ARM.attributes')
-            self.arm_arch = self.get_tag_cpu_arch(arm_attr)
-
         self.entry = elf.header.e_entry
         self.memory = self.load_code_segments(elf.iter_segments(), filename)
         self.symtab, self.thumbtab, self.code_addrs = self.load_section_info(elf.iter_sections())
 
         self.thumbtab.sort(key=lambda tup: tup[0])
         self.code_addrs = sorted(self.code_addrs, key=lambda k: k['address'])
+
+    def init_asmblr(self):
+        arch = {'x86':KS_ARCH_X86,'x64':KS_ARCH_X86, 'ARM':KS_ARCH_ARM}[self.arch]
+        mode = {'x86':KS_MODE_32, 'x64':KS_MODE_64, 'ARM':KS_MODE_ARM}[self.arch]
+        self.ks = Ks(arch, mode)
+        if self.arch == 'ARM':
+            self.t_ks = Ks(arch, CS_MODE_THUMB)
 
     def init_disasmblr(self):
         arch = {'x86':CS_ARCH_X86,'x64':CS_ARCH_X86, 'ARM':CS_ARCH_ARM}[self.arch]
@@ -133,6 +138,16 @@ class Disassembler():
             return disasms
         else:
             return [i for i in self.md.disasm(self.read_memory(address, size), address)]
+
+    def asm(self, asmcode, thumb=False):
+        ks = self.ks if not thumb else self.t_ks
+        try:
+            encoding, count = ks.asm(asmcode)
+        except KsError as err:
+            msg = "Error: %s" % err
+            signals.set_message.send(0, message=msg, expire=2)
+            return ""
+        return ''.join(map(chr, encoding))
 
     def is_thumb_instr(self, instr):
         return instr._cs.mode == CS_MODE_THUMB
@@ -168,57 +183,3 @@ class Disassembler():
 
     def is_thumb_addr(self, address):
         return self.arch == 'ARM' and (address & 1) == 1
-
-    # Find the architecture of an ARM ELF binary
-    def get_tag_cpu_arch(self, attr):
-        from struct import unpack
-        tag_list = [
-                'Pre_v4',
-                'v4',       # e.g. SA110
-                'v4T',      # e.g. ARM7TDMI
-                'v5T',      # e.g. ARM9TDMI
-                'v5TE',     # e.g. ARM946E_S
-                'v5TEJ',    # e.g. ARM926EJ_S
-                'v6',       # e.g. ARM1136J_S
-                'v6KZ',     # e.g. ARM1176JZ_S
-                'v6T2',     # e.g. ARM1156T2_S
-                'v6K',      # e.g. ARM1176JZ_S
-                'v7',       # e.g. Cortex A8, Cortex M3
-                'v6_M',     # e.g. Cortex M1
-                'v6S_M',    # v6_M with the System extensions
-                'v7E_M',    # v7_M with DSP extensions
-                'v8'        # v8,v8.1a AArch32
-                ]
-
-        attr_data = attr.data()
-
-        if attr_data[0] != 'A':
-            return ""
-
-        idx = 1
-        size = unpack('<L', attr_data[idx:idx+4])[0]
-        idx += 4
-
-        if attr_data[idx:idx+5] != "aeabi":
-            return ""
-        idx += 6
-
-        while idx - 1 < size:
-            tag_number = attr_data[idx]
-            idx += 1
-            if tag_number in "\x04\x05\x67\x32":
-                idx = attr_data.find("\x00",idx) + 1
-            else:
-                result = 0
-                shift = 0
-                while True:
-                    byte = unpack('B', attr_data[idx])[0]
-                    idx += 1
-                    result |= ((byte & 0x7F) << shift)
-                    if (byte & 0x80) == 0:
-                        break
-                    shift += 7
-                if tag_number == "\x06": # tag_arch
-                    return tag_list[result]
-
-        return ""

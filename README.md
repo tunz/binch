@@ -21,15 +21,3 @@ enter: Modify a current line.
 h: Modify hex bytes of a current line.
 f: follow the address of jmp or call instructions.
 ```
-
-## Prerequisite
-
-Install llvm-mc (Ubuntu)
-```
-# apt-get install llvm
-```
-or (OS X)
-```
-# port install llvm-3.6
-# ln -s /opt/local/bin/llvm-mc-mp-3.6 /opt/local/bin/llvm-mc
-```
