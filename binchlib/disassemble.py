@@ -125,7 +125,7 @@ class Disassembler():
             self.t_md.detail = True
 
     def disasm(self, address, size=None):
-        if self.arch == 'ARM':
+        if self.arch == 'ARM' and self.thumbtab:
             disasms = []
             thumb = bool(address & 1)
             address = address & 0xfffffffe

@@ -1,4 +1,5 @@
 from . import signals
+import view
 import urwid
 
 class CommandLine(urwid.WidgetWrap):
@@ -90,7 +91,7 @@ class StatusBar(urwid.WidgetWrap):
     def __init__(self, text, view):
         urwid.WidgetWrap.__init__(self, None)
         self.view = view
-        self.commandline = CommandLine() 
+        self.commandline = CommandLine()
         self.default_text = text
         self.update_status()
         signals.redraw_status.connect(self.sig_redraw_status)
@@ -99,7 +100,7 @@ class StatusBar(urwid.WidgetWrap):
         self.update_status()
 
     def update_status(self):
-        if self.view.disasmblr.arch == 'ARM':
+        if self.view.disasmblr.arch == 'ARM' and isinstance(self.view.disasmlist._w.focus, view.DisassembleInstruction):
             if self.view.disasmlist._w.focus.isthumb:
                 mode = "[Thumb]"
             else:
