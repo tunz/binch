@@ -1,3 +1,9 @@
+**NOTE**
+
+This repository is not maintained. Please use [binch-go](https://github.com/tunz/binch-go) instead. I just rewrote this in Go since python is slow and keystone python library is not maintained well.
+
+---
+
 # a light BINary patCH tool
 A light ELF binary patch tool in python urwid. It helps to patch a ELF binary in a few steps.
 
